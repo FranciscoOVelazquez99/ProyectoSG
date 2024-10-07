@@ -1,0 +1,89 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-image: url('fondo-logi.jpg');
+  background-size: cover; /* Ajusta el tamaño de la imagen para cubrir todo el contenedor */
+  background-attachment: fixed; /* Hace que la imagen de fondo sea fija */
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.login-container {
+  background-color: #1c1c1c;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 300px;
+}
+
+.logo img {
+  width: 100px;
+  margin-bottom: 20px;
+  border-radius: 20px;
+}
+
+h2 {
+  color: #1ea0ff;
+  margin-bottom: 10px;
+}
+
+p {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border: none;
+  border-radius: 5px;
+}
+
+input[type="email"], input[type="password"] {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #444;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #1ea0ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button:hover {
+  background-color: #1484d6;
+}
+
+.register {
+  margin-top: 20px;
+}
+
+.register a {
+  color: #1ea0ff;
+  text-decoration: none;
+}
+
+.register a:hover {
+  text-decoration: underline;
+}

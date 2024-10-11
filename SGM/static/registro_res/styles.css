@@ -53,6 +53,14 @@
     border: none;
     border-radius: 5px;
   }
+
+  select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: none;
+    border-radius: 5px;
+  }
   
   input[type="email"], input[type="password"] {
     background-color: #333;

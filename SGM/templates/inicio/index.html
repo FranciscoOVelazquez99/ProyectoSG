@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantalla de Inicio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='topbar.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='inicio_res/styles.css')}}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="left-section">
+            <a href="/logout">
+            <i class="fa-solid fa-right-from-bracket" style="color: #fff;"></i>
+            </a>
+        </div>
+        <div class="right-section">
+
+            <i class="fas fa-envelope"></i>
+            <span class="notification">5</span>
+
+            <div class="user-info">
+                <span>{{ current_user.username }}</span>
+                <i class="fa-solid fa-user-tie" style="color: #fff;"></i>
+                <img src="https://via.placeholder.com/40" alt="Avatar" class="user-avatar">
+            </div>
+        </div>
+    </header>
+    <!-- Topbar -->
+
+
+
+    <div class="grid-container">
+
+        {% if current_user.userclass=='ADMIN' %}
+        <div class="grid-item">
+            <a href="/register">
+                <div class="icon">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <p>Usuarios</p>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="grid-item">
+            <div class="icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <p>Calendario</p>
+        </div>
+
+        <div class="grid-item">
+            <div class="icon">
+                <i class="fas fa-sticky-note"></i>
+            </div>
+            <p>Notas</p>
+        </div>
+
+
+
+
+        <div class="grid-item">
+            <div class="icon">
+                <i class="fas fa-globe"></i>
+            </div>
+            <p>Proveedores</p>
+        </div>
+
+        <div class="grid-item">
+            <div class="icon">
+                <i class="fas fa-tools"></i>
+            </div>
+            <p>Mantenimientos</p>
+        </div>
+        <div class="grid-item">
+            <a href="/inventario">
+                <div class="icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <p>Inventario</p>
+            </a>
+        </div>
+        <!-- Añadir más elementos según sea necesario -->
+    </div>
+</body>
+</html>

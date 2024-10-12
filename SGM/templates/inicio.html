@@ -46,6 +46,17 @@
         </div>
         {% endif %}
 
+        {% if current_user.userclass=='ADMIN' %}
+        <div class="grid-item">
+            <a href="/localizacion">
+                <div class="icon">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <p>Localizaciones</p>
+            </a>
+        </div>
+        {% endif %}
+
         <div class="grid-item">
             <div class="icon">
                 <i class="fas fa-calendar-alt"></i>

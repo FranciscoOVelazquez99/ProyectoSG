@@ -80,8 +80,9 @@ class Element(db.Model):
 class ElementCategory(db.Model):
     __tablename__ = 'elm_category'
    
-    IDcategory = Column(Integer, ForeignKey('category.IDcategory'), primary_key=True)
-    IDelement = Column(Integer, ForeignKey('elements.IDelement'), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    IDcategory = Column(Integer, ForeignKey('category.IDcategory'))
+    IDelement = Column(Integer, ForeignKey('elements.IDelement'))
 
 class Email(db.Model):
     __tablename__ = 'email'
@@ -129,6 +130,16 @@ class OrderRep(db.Model):
    
     IDorder = Column(Integer, ForeignKey('orders.IDorder'), primary_key=True)
     repeat_day = Column(String(255), primary_key=True)
+
+class Location(db.Model):
+    __tablename__ = 'location'
+   
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    planta = Column(String(255), nullable=True)
+    descrip = Column(String(255), nullable=True)
+    img = Column(String(255), nullable=True)
+
 
 class Task(db.Model):
     __tablename__ = 'tareas'
@@ -202,7 +213,7 @@ def home():
 @app.route("/inicio", methods=['GET', 'POST'])
 @login_required
 def inicio():
-    return render_template('inicio/index.html')
+    return render_template('inicio.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -290,7 +301,7 @@ def inventario():
     elements = Element.query.all()
     
     # Renderizar plantilla y pasar datos
-    return render_template('inventario/index.html', categories=categories, elements=elements)
+    return render_template('inventario.html', categories=categories, elements=elements)
 
 
 
@@ -317,6 +328,24 @@ def crear_categoria():
     return jsonify({'message': 'Debe ingresar un nombre para la categoría.'}), 400  # Error: nombre no válido
 
 
+@app.route('/borrar_category/<int:IDcategory>', methods=['POST'])
+def borrar_category(IDcategory):
+
+    try:
+        elm_cat = ElementCategory.query.get_or_404(IDcategory)
+        db.session.delete(elm_cat)
+    except:
+        pass
+
+    cat = Category.query.get_or_404(IDcategory)
+    db.session.delete(cat)
+
+    db.session.commit()
+    flash('Elemento eliminado', 'success')
+    return redirect(url_for('inventario'))
+
+
+
 @app.route('/subir_elemento', methods=['POST'])
 def subir_elemento():
     # Obtener datos del FormData
@@ -340,7 +369,7 @@ def subir_elemento():
     image.save(image_path)
     image_path='static/uploads/'+filename
     # Crear el nuevo elemento
-    nuevo_elemento = Element(name=name,disp=True, cant=quantity, adds=description, img=image_path)
+    nuevo_elemento = Element(name=name,disp=True, cant=quantity, adds=description, img=filename)
 
     # Añadir a la base de datos
     db.session.add(nuevo_elemento)
@@ -362,7 +391,15 @@ def subir_elemento():
 @app.route('/borrar_elemento/<int:IDelement>', methods=['POST'])
 def borrar_elemento(IDelement):
     element = Element.query.get_or_404(IDelement)
+    elm_car = ElementCategory.query.get_or_404(IDelement)
+    if element.img:
+                    try:
+                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], element.img))
+                    except FileNotFoundError:
+                        pass 
+    
     db.session.delete(element)
+    db.session.delete(elm_car)
     db.session.commit()
     flash('Elemento eliminado', 'success')
     return redirect(url_for('inventario'))
@@ -397,6 +434,22 @@ def filtrar_elementos():
     return render_template('inventario/index.html', categories=categorias, elements=elementos_filtrados)
 
 ########### /////////// #########
+
+
+########### Localizaciones #########
+@app.route('/localizacion')
+def localizacion():
+    ## Obtener todas las localizaciones cargadas
+    locations = Location.query.all()
+    
+    
+    
+    return render_template('locations.html', locations=locations)
+
+########### /////////// #########
+
+
+
 
 ############################ ////////////// ###################################################
 

@@ -77,7 +77,7 @@
             {% else %}
                 <div class="inventory-item"  style="background-color: rgb(196, 196, 196);" >
             {% endif %}
-                <img src="{{ element.img }}" alt="{{ element.name }}">
+                <img src="static/uploads/{{ element.img }}" alt="{{ element.name }}">
                 <p>{{ element.name }}</p>
                 <p>Cantidad: {{ element.cant }}</p>
                 <div>
@@ -107,6 +107,27 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" onclick="createCategory()">Crear Categoría</button>
+                </div>
+                <div style="
+                display: inline-grid;
+                gap: 5px;
+                align-content: center;
+                align-items: center;
+                justify-items: center;
+                grid-auto-flow: column;
+                padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap)* .5);
+                ">
+                    {% for category in categories %}
+                        <form action="{{ url_for('borrar_category', IDcategory=category.IDcategory) }}" method="post" style="display: inline;">
+                            <div class="btn btn-secondary" style="padding: 0px 5px 0px 0px;">
+
+                                <input class="btn btn-primary btn-sm" type="submit" value="X" onclick="return confirm('¿Estás seguro de eliminar esta categoria?')">
+
+                                {{ category.name}}
+
+                            </div>
+                        </form>
+                    {% endfor %}
                 </div>
             </div>
         </div>

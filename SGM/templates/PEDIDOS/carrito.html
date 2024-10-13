@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito</title>
+</head>
+<body>
+    <div id="cart-section"></div>
+    
+    <!-- Selector de fecha para la orden -->
+    <input type="date" id="order-date" value="{{ date }}" required />
+
+    <!-- Selector del orario para la orden -->
+    <input type="time" id="order-time" value="" required/>
+
+    <!-- Selector de localización -->
+    <label for="location-select">Seleccionar localización:</label>
+    <select id="location-select"></select>
+
+    <!-- Repetir pedido -->
+    <input type="checkbox" id="repeat-order" /> Repetir pedido
+    <div id="repeat-days" style="display:none;">
+        <label><input type="checkbox" value="Monday" class="repeat-day" /> Lunes</label>
+        <label><input type="checkbox" value="Tuesday" class="repeat-day" /> Martes</label>
+        <label><input type="checkbox" value="Wednesday" class="repeat-day" /> Miércoles</label>
+        <label><input type="checkbox" value="Thursday" class="repeat-day" /> Jueves</label>
+        <label><input type="checkbox" value="Friday" class="repeat-day" /> Viernes</label>
+        <label><input type="checkbox" value="Saturday" class="repeat-day" /> Sábado</label>
+        <label><input type="checkbox" value="Sunday" class="repeat-day" /> Domingo</label>
+    </div>
+
+    <button id="confirm-btn">Confirmar Pedido</button>
+    <button id="back-btn" onclick="window.history.back();">Retroceder</button>
+
+    <script>
+        let cartItems = JSON.parse(localStorage.getItem('cart')) || [];  // Guardar el carrito en localStorage
+
+        // Función para cargar y mostrar las localizaciones
+        async function loadLocations() {
+            const response = await fetch('/locations');
+            const locations = await response.json();
+            
+            const locationSelect = document.getElementById('location-select');
+            locationSelect.innerHTML = '';  // Limpiar el selector
+
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.id;
+                option.textContent = location.name;
+                locationSelect.appendChild(option);
+            });
+        }
+
+        // Función para renderizar el carrito
+        function renderCart() {
+            const cartSection = document.getElementById('cart-section');
+            cartSection.innerHTML = '';  // Limpiar el carrito
+
+            cartItems.forEach(item => {
+                const div = document.createElement('div');
+                div.textContent = `${item.name} (Cantidad disponible: ${item.candisp})`;
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = item.quantity;
+                input.max = item.candisp;
+                input.onchange = (e) => {
+                    item.quantity = parseInt(e.target.value);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Eliminar';
+                deleteBtn.onclick = () => {
+                    cartItems = cartItems.filter(i => i.IDelement !== item.IDelement);
+                    renderCart();  // Volver a renderizar el carrito
+                };
+
+                div.appendChild(input);
+                div.appendChild(deleteBtn);
+                cartSection.appendChild(div);
+            });
+        }
+
+        // Mostrar/ocultar los días cuando se hace clic en el checkbox "Repetir pedido"
+        document.getElementById('repeat-order').onclick = () => {
+            const repeatDaysDiv = document.getElementById('repeat-days');
+            repeatDaysDiv.style.display = document.getElementById('repeat-order').checked ? 'block' : 'none';
+        };
+
+        // Función para confirmar el pedido
+        document.getElementById('confirm-btn').onclick = async () => {
+            const selectedDays = Array.from(document.querySelectorAll('.repeat-day:checked'))
+                                      .map(day => day.value);  // Obtener los días seleccionados
+
+            const orderData = {
+                date: document.getElementById('order-date').value,
+                time: document.getElementById('order-time').value,
+                location: document.getElementById('location-select').value,  // Localización seleccionada
+                repeat: document.getElementById('repeat-order').checked,
+                repeatDays: selectedDays,  // Enviar los días seleccionados
+                items: cartItems
+            };
+            
+            const response = await fetch('/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+
+            if (response.ok) {
+                localStorage.removeItem('cart');  // Limpiar carrito
+                alert('Pedido confirmado');
+                window.location.href = '/pedidos';
+            }
+        };
+
+        // Inicializar la página
+        loadLocations();  // Cargar localizaciones
+        renderCart();  // Renderizar carrito
+    </script>
+</body>
+</html>

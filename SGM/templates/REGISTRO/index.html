@@ -13,7 +13,7 @@
         </div>
         <h2>Registro</h2>
         <p>!Créa una nueva cuenta!</p>
-        <form action="{{ url_for('register') }}" method="POST">
+        <form action="{{ url_for('registro') }}" method="POST">
             {{ form.hidden_tag() }}
             <label for="user">Usuario</label>
             {{ form.username(class="form-control") }}

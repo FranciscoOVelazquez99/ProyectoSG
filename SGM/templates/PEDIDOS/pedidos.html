@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos</title>
+    <style>
+        .element {
+            padding: 10px;
+            margin: 10px;
+            width: 20%;
+
+            text-align: center;
+            color: white;
+            cursor: pointer;
+        }
+        .element img{
+            max-width: 20vh;
+            height: auto;
+        }
+        .element.available {
+            background-color: green;
+        }
+        .element.unavailable {
+            background-color: red;
+        }
+        .element.selected {
+            border: 2px solid yellow;
+        }
+        .filter-btn {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .filter-btn.selected {
+            background-color: blue;
+        }
+        .grid-section {
+            display: flex;
+            flex-wrap: nowrap;
+            flex-direction: row;
+        }
+    </style>
+</head>
+<body>
+    <div id="filter-section" class="filter-section"></div>
+    <div id="grid-section" class="grid-section"></div>
+    <button id="checkout-btn" style="position: fixed; bottom: 20px; right: 20px;">Ir al Carrito</button>
+
+    <script>
+        let selectedCategories = [];
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];  // Cargar carrito desde localStorage
+
+        // Función para cargar elementos del backend
+        async function loadElements() {
+            // Construimos la URL de la solicitud con las categorías seleccionadas
+            let url = '/elements';
+            if (selectedCategories.length > 0) {
+                url += '?categories[]=' + selectedCategories.join('&categories[]=');
+            }
+
+            const response = await fetch(url);
+            const elements = await response.json();
+            
+            const grid = document.getElementById('grid-section');
+            grid.innerHTML = '';  // Limpiar el grid
+
+            elements.forEach(element => {
+                const div = document.createElement('div');
+                div.classList.add('element');
+                div.classList.add(element.disp ? 'available' : 'unavailable');
+                // Agregar la imagen usando innerHTML
+                div.innerHTML += `<div><img src="static/uploads/${element.img}" alt="${element.name}"></div>`;
+
+                // Agregar el texto también usando innerHTML
+                div.innerHTML += `${element.name} (Disp: ${element.candisp})`;
+                
+                // Chequear si el elemento ya está en el carrito
+                const inCart = cart.find(item => item.IDelement === element.IDelement);
+                if (inCart) {
+                    div.classList.add('selected');  // Mostrar como seleccionado
+                }
+
+                // Evento al hacer clic en el elemento
+                div.onclick = () => {
+                    if (inCart) {
+                        // Si ya está seleccionado, lo quitamos del carrito
+                        cart = cart.filter(item => item.IDelement !== element.IDelement);
+                        div.classList.remove('selected');
+                    } else {
+                        // Si no está en el carrito, lo agregamos
+                        cart.push({
+                            IDelement: element.IDelement,
+                            name: element.name,
+                            quantity: 1,  // Por default la cantidad será 1
+                            candisp: element.candisp  // Límite máximo de cantidad disponible
+                        });
+                        div.classList.add('selected');
+                    }
+
+                    // Guardar el carrito en localStorage
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                };
+
+                grid.appendChild(div);
+            });
+        }
+
+        // Función para cargar categorías del backend y agregar botones de filtro
+        async function loadCategories() {
+            const response = await fetch('/categories');
+            const categories = await response.json();
+            
+            const filterSection = document.getElementById('filter-section');
+            filterSection.innerHTML = '';  // Limpiar botones
+
+            categories.forEach(category => {
+                const btn = document.createElement('button');
+                btn.classList.add('filter-btn');
+                btn.textContent = category.name;
+
+                btn.onclick = () => {
+                    if (selectedCategories.includes(category.IDcategory)) {
+                        selectedCategories = selectedCategories.filter(id => id !== category.IDcategory);
+                        btn.classList.remove('selected');
+                    } else {
+                        selectedCategories.push(category.IDcategory);
+                        btn.classList.add('selected');
+                    }
+                    loadElements();  // Cargar elementos filtrados
+                };
+
+                filterSection.appendChild(btn);
+            });
+        }
+
+        // Inicializar página
+        loadCategories();
+        loadElements();
+
+        // Actualizar constantemente cada 5 segundos
+        setInterval(loadElements, 555000);
+
+        // Función para ir al carrito
+        document.getElementById('checkout-btn').onclick = () => {
+            window.location.href = '/checkout';
+        };
+    </script>
+</body>
+</html>

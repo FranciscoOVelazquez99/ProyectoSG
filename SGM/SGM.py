@@ -107,7 +107,7 @@ class Maintenance(db.Model):
 class MaintenanceElement(db.Model):
     __tablename__ = 'maintenance_elm'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    IDmantenance = Column(Integer, ForeignKey('maintenance.IDmaintenance'))
+    IDmaintenance = Column(Integer, ForeignKey('maintenance.IDmaintenance'))
     IDelement = Column(Integer, ForeignKey('elements.IDelement'))
     revised = Column(Integer, nullable=True)
     details = Column(String(255), nullable=True)

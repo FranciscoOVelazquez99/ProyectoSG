@@ -43,11 +43,11 @@ CREATE TABLE maintenance (
 );
 
 CREATE TABLE maintenance_elm (
-  IDmantenance INTEGER NOT NULL,
+  IDmaintenance INTEGER NOT NULL,
   IDelement INTEGER NOT NULL,
   revised INTEGER DEFAULT NULL,
   details TEXT DEFAULT NULL,
-  PRIMARY KEY (IDmantenance),
+  PRIMARY KEY (IDmaintenance),
   FOREIGN KEY (IDelement) REFERENCES elements(IDelement)
 );
 

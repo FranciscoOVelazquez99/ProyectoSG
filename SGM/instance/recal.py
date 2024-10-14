@@ -47,7 +47,7 @@ class Maintenance(Base):
 class MaintenanceElement(Base):
     __tablename__ = 'maintenance_elm'
    
-    IDmantenance = Column(Integer, ForeignKey('maintenance.IDmaintenance'), primary_key=True)
+    IDmaintenance = Column(Integer, ForeignKey('maintenance.IDmaintenance'), primary_key=True)
     IDelement = Column(Integer, ForeignKey('elements.IDelement'))
     revised = Column(Integer, nullable=True)
     details = Column(String(255), nullable=True)

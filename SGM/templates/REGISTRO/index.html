@@ -15,7 +15,7 @@
         <p>!Créa una nueva cuenta!</p>
         <form action="{{ url_for('registro') }}" method="POST">
             {{ form.hidden_tag() }}
-            <label for="user">Usuario</label>
+            <label for="username">Usuario</label>
             {{ form.username(class="form-control") }}
 
             <label for="email">Email</label>
@@ -31,20 +31,27 @@
         </form>
     </div>
     {% if users %}
-    <div class="login-container">
+    <div class="users-container">
         {% for user in users %}
+        <div style="display: flex; gap: 10px; background-color: #373737; padding: 10px; justify-content: space-between;" >
+            <div>
+                <img src="static/img/{{ user.useravatar }}" srcset="static/img/alt-user.webp" style="width: 10vh; height: auto; vertical-align: middle;">
+            </div>
+            <div style="display: flex;">
+                <div style="align-self: center; display: flex; flex-direction: column;">
 
-        <div>
-            <div>{{ user.username }}</div>
-            <div>{{ user.userclass }}</div>
+                    <div>{{ user.username }}</div>
+                    <div>{{ user.userclass }}</div>
+                
+                </div>
+                
+            </div>
+            <div>
+                <form action="{{ url_for('borrar_usuario', user_id=user.IDuser) }}" method="post" style="display: inline;">
+                    <input style="height: 100%; background-color: #ff3939;" class="btn btn-primary btn-sm" style="--bs-btn-line-height: 0.7;" type="submit" value="X" onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
+                </form>
+            </div>
         </div>
-
-        <div>
-            <form action="{{ url_for('borrar_usuario', user_id=user.IDuser) }}" method="post" style="display: inline;">
-                <input class="btn btn-primary btn-sm" style="--bs-btn-line-height: 0.7;" type="submit" value="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este usuario?')">
-            </form>
-        </div>
-
         {% endfor %}
     </div>
     {% endif %}

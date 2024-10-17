@@ -9,12 +9,11 @@
             padding: 10px;
             margin: 10px;
             width: 20%;
-
             text-align: center;
             color: white;
             cursor: pointer;
         }
-        .element img{
+        .element img {
             max-width: 20vh;
             height: auto;
         }
@@ -37,7 +36,7 @@
         }
         .grid-section {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             flex-direction: row;
         }
     </style>
@@ -53,7 +52,6 @@
 
         // Función para cargar elementos del backend
         async function loadElements() {
-            // Construimos la URL de la solicitud con las categorías seleccionadas
             let url = '/elements';
             if (selectedCategories.length > 0) {
                 url += '?categories[]=' + selectedCategories.join('&categories[]=');
@@ -61,7 +59,6 @@
 
             const response = await fetch(url);
             const elements = await response.json();
-            
             const grid = document.getElementById('grid-section');
             grid.innerHTML = '';  // Limpiar el grid
 
@@ -69,12 +66,12 @@
                 const div = document.createElement('div');
                 div.classList.add('element');
                 div.classList.add(element.disp ? 'available' : 'unavailable');
+
                 // Agregar la imagen usando innerHTML
                 div.innerHTML += `<div><img src="static/uploads/${element.img}" alt="${element.name}"></div>`;
-
                 // Agregar el texto también usando innerHTML
                 div.innerHTML += `${element.name} (Disp: ${element.candisp})`;
-                
+
                 // Chequear si el elemento ya está en el carrito
                 const inCart = cart.find(item => item.IDelement === element.IDelement);
                 if (inCart) {
@@ -83,34 +80,40 @@
 
                 // Evento al hacer clic en el elemento
                 div.onclick = () => {
-                    if (inCart) {
-                        // Si ya está seleccionado, lo quitamos del carrito
-                        cart = cart.filter(item => item.IDelement !== element.IDelement);
-                        div.classList.remove('selected');
-                    } else {
-                        // Si no está en el carrito, lo agregamos
-                        cart.push({
-                            IDelement: element.IDelement,
-                            name: element.name,
-                            quantity: 1,  // Por default la cantidad será 1
-                            candisp: element.candisp  // Límite máximo de cantidad disponible
-                        });
-                        div.classList.add('selected');
-                    }
-
-                    // Guardar el carrito en localStorage
-                    localStorage.setItem('cart', JSON.stringify(cart));
+                    toggleCartItem(element, div);
                 };
 
                 grid.appendChild(div);
             });
         }
 
+        // Función para alternar el estado de un elemento en el carrito
+        function toggleCartItem(element, div) {
+            const inCart = cart.find(item => item.IDelement === element.IDelement);
+
+            if (inCart) {
+                // Si ya está seleccionado, lo quitamos del carrito
+                cart = cart.filter(item => item.IDelement !== element.IDelement);
+                div.classList.remove('selected');
+            } else {
+                // Si no está en el carrito, lo agregamos
+                cart.push({
+                    IDelement: element.IDelement,
+                    name: element.name,
+                    quantity: 1,  // Por default la cantidad será 1
+                    candisp: element.candisp  // Límite máximo de cantidad disponible
+                });
+                div.classList.add('selected');
+            }
+
+            // Guardar el carrito en localStorage
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
         // Función para cargar categorías del backend y agregar botones de filtro
         async function loadCategories() {
             const response = await fetch('/categories');
             const categories = await response.json();
-            
             const filterSection = document.getElementById('filter-section');
             filterSection.innerHTML = '';  // Limpiar botones
 
@@ -138,8 +141,8 @@
         loadCategories();
         loadElements();
 
-        // Actualizar constantemente cada 5 segundos
-        setInterval(loadElements, 555000);
+        // Actualizar cada 5 segundos, pero no afectar el carrito
+        setInterval(loadElements, 5000);
 
         // Función para ir al carrito
         document.getElementById('checkout-btn').onclick = () => {

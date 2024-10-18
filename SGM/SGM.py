@@ -119,10 +119,16 @@ class Order(db.Model):
     IDuser = Column(Integer, ForeignKey('user.IDuser'))
     time = Column(Time, nullable=False)
     date = Column(Date, nullable=False)
-    location = Column(String(255), nullable=False)
+    location = Column(Integer, ForeignKey('location.id'))  # FK con Location
     repeat = db.Column(db.Boolean, nullable=True)
     finish = Column(Date, nullable=True)
     state = Column(String(255), nullable=False)
+
+    # Relación con la tabla Location
+    location_info = db.relationship('Location', backref='orders')
+    
+    # Relación con la tabla OrderElement (para obtener los elementos en la orden)
+    order_elements = db.relationship('OrderElement', backref='order')
 
 class OrderElement(db.Model):
     __tablename__ = 'orders_elm'
@@ -131,6 +137,10 @@ class OrderElement(db.Model):
     IDorder = Column(Integer, ForeignKey('orders.IDorder'))
     IDelement = Column(Integer, ForeignKey('elements.IDelement'))
     cant = Column(Integer, nullable=False)
+
+    # Relación con la tabla Element
+    element = db.relationship('Element', backref='order_elements')
+
 
 class OrderRep(db.Model):
     __tablename__ = 'orders_rep'
@@ -214,7 +224,7 @@ def validate_username(username):
 
 
 ############################ Login ###################################################
-@app.route('/SGM')
+@app.route('/')
 def home():
     return redirect(url_for('login'))
 
@@ -589,7 +599,7 @@ def checkout():
             time=order_time,
             location=data['location'],  # Localización seleccionada por el usuario
             repeat = data['repeat'],
-            state='pending'
+            state='Pendiente'
         )
         db.session.add(new_order)
         db.session.flush()  # Para obtener el ID de la orden recién creada
@@ -607,6 +617,88 @@ def checkout():
 
         db.session.commit()
         return jsonify({'success': True})
+
+############################ ////////////// ###################################################
+
+
+############################ orders ###################################################
+
+@app.route('/orders', methods=['GET'])
+def show_orders():
+    orders = Order.query.join(Location, Location.id == Order.location) \
+                        .join(OrderElement, Order.IDorder == OrderElement.IDorder) \
+                        .join(Element, Element.IDelement == OrderElement.IDelement) \
+                        .all()
+
+
+    # Se obtienen todas las órdenes junto a sus localizaciones y elementos.
+    return render_template('verif_pedidos.html', orders=orders)
+
+
+
+@app.route('/update_order', methods=['POST'])
+def update_order():
+    data = request.form  # Recibir datos del formulario enviado con POST
+    
+    # Obtener la orden que queremos actualizar
+    order = Order.query.filter_by(IDorder=data['IDorder']).first()
+    
+    if data['state'] == 'Entregado':
+        # Actualizar el estado de la orden
+        order.state = data['state']
+        
+        # Actualizar la cantidad disponible de cada elemento y la cantidad en la orden
+        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
+            # Actualizar la tabla 'OrderElement'
+            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
+            order_element.cant = int(cant)
+            
+            # Restar la cantidad disponible en la tabla 'Element'
+            element = Element.query.filter_by(IDelement=elm_id).first()
+            element.candisp -= int(cant)
+            
+        # Guardar cambios en la base de datos
+        db.session.commit()
+    elif data['state'] == 'Pendiente':
+                
+        order.state = data['state']
+        
+        
+        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
+            
+            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
+            order_element.cant = int(cant)
+
+       
+        db.session.commit()
+
+    elif data['state'] == 'Devuelto':
+                
+        order.state = data['state']
+        
+        
+        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
+            
+            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
+            order_element.cant = int(cant)
+            
+            # Sunma la cantidad disponible en la tabla 'Element'
+            element = Element.query.filter_by(IDelement=elm_id).first()
+            element.candisp += int(cant)
+        
+        db.session.commit()
+
+    elif data['state'] == 'Cancelada':
+                
+        # Primero eliminamos los elementos asociados a la orden en la tabla 'OrderElement'
+        OrderElement.query.filter_by(IDorder=order.IDorder).delete()
+
+        # Ahora eliminamos la orden en si
+        db.session.delete(order)
+
+        db.session.commit()
+
+    return redirect('/orders')
 
 ############################ ////////////// ###################################################
 

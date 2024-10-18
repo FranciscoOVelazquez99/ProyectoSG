@@ -5,52 +5,163 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedidos</title>
     <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
         .element {
-            padding: 10px;
-            margin: 10px;
-            width: 20%;
+            padding: 15px;
+            margin: 15px;
+            width: 22vh;
             text-align: center;
             color: white;
             cursor: pointer;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+        
+        .element:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
         .element img {
-            max-width: 20vh;
+            max-width: 18vh;
             height: auto;
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
+
         .element.available {
-            background-color: green;
+            background-color: #28a745;
         }
+
         .element.unavailable {
-            background-color: red;
+            background-color: #6c757d;
         }
+
         .element.selected {
-            border: 2px solid yellow;
+            border: 2px solid #ffc107;
+            transform: scale(1.08);
         }
+
         .filter-btn {
-            padding: 10px;
-            margin: 5px;
+            padding: 10px 20px;
+            margin: 10px 5px;
             cursor: pointer;
+            background-color: #fff;
+            border: 2px solid #007bff;
+            border-radius: 25px;
+            transition: transform 0.3s ease-in-out, background-color 0.3s;
         }
+
+        .filter-btn:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+
         .filter-btn.selected {
-            background-color: blue;
+            background-color: #007bff;
+            color: #fff;
+            transform: scale(1.05);
         }
+
+        .filter-section {
+            background-color: #343a40;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
         .grid-section {
             display: flex;
             flex-wrap: wrap;
-            flex-direction: row;
+            justify-content: center;
+            background-color: #ffffff;
+            border-radius: 0 0 10px 10px;
+            padding: 15px;
+            gap: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color: #343a40;
+            padding: 20px;
+            color: white;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 12px 12px;
+            margin-bottom: 30px;
+        }
+
+        .checkout-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 50px;
+            background-color: #28a745;
+            color: white;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+
+        .checkout-btn:hover {
+            background-color: #218838;
+        }
+
+        .checkout-btn i {
+            margin-right: 10px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .element {
+                width: 40vw;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .element {
+                width: 60vw;
+            }
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+    <header class="header">
+        <h1>Pañol de Materiales</h1>
+    </header>
+    
     <div id="filter-section" class="filter-section"></div>
     <div id="grid-section" class="grid-section"></div>
-    <button id="checkout-btn" style="position: fixed; bottom: 20px; right: 20px;">Ir al Carrito</button>
+    
+    <button id="checkout-btn" class="checkout-btn">
+        <i class="fa-solid fa-cart-flatbed"></i> Checkout
+    </button>
 
     <script>
         let selectedCategories = [];
-        let cart = JSON.parse(localStorage.getItem('cart')) || [];  // Cargar carrito desde localStorage
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-        // Función para cargar elementos del backend
         async function loadElements() {
             let url = '/elements';
             if (selectedCategories.length > 0) {
@@ -60,25 +171,21 @@
             const response = await fetch(url);
             const elements = await response.json();
             const grid = document.getElementById('grid-section');
-            grid.innerHTML = '';  // Limpiar el grid
+            grid.innerHTML = '';
 
             elements.forEach(element => {
                 const div = document.createElement('div');
                 div.classList.add('element');
                 div.classList.add(element.disp ? 'available' : 'unavailable');
 
-                // Agregar la imagen usando innerHTML
                 div.innerHTML += `<div><img src="static/uploads/${element.img}" alt="${element.name}"></div>`;
-                // Agregar el texto también usando innerHTML
-                div.innerHTML += `${element.name} (Disp: ${element.candisp})`;
+                div.innerHTML += `<div><p>${element.name}</p> <p>(Disp: ${element.candisp})</p></div>`;
 
-                // Chequear si el elemento ya está en el carrito
                 const inCart = cart.find(item => item.IDelement === element.IDelement);
                 if (inCart) {
-                    div.classList.add('selected');  // Mostrar como seleccionado
+                    div.classList.add('selected');
                 }
 
-                // Evento al hacer clic en el elemento
                 div.onclick = () => {
                     toggleCartItem(element, div);
                 };
@@ -87,35 +194,30 @@
             });
         }
 
-        // Función para alternar el estado de un elemento en el carrito
         function toggleCartItem(element, div) {
             const inCart = cart.find(item => item.IDelement === element.IDelement);
 
             if (inCart) {
-                // Si ya está seleccionado, lo quitamos del carrito
                 cart = cart.filter(item => item.IDelement !== element.IDelement);
                 div.classList.remove('selected');
             } else {
-                // Si no está en el carrito, lo agregamos
                 cart.push({
                     IDelement: element.IDelement,
                     name: element.name,
-                    quantity: 1,  // Por default la cantidad será 1
-                    candisp: element.candisp  // Límite máximo de cantidad disponible
+                    quantity: 1,
+                    candisp: element.candisp
                 });
                 div.classList.add('selected');
             }
 
-            // Guardar el carrito en localStorage
             localStorage.setItem('cart', JSON.stringify(cart));
         }
 
-        // Función para cargar categorías del backend y agregar botones de filtro
         async function loadCategories() {
             const response = await fetch('/categories');
             const categories = await response.json();
             const filterSection = document.getElementById('filter-section');
-            filterSection.innerHTML = '';  // Limpiar botones
+            filterSection.innerHTML = '';
 
             categories.forEach(category => {
                 const btn = document.createElement('button');
@@ -130,23 +232,24 @@
                         selectedCategories.push(category.IDcategory);
                         btn.classList.add('selected');
                     }
-                    loadElements();  // Cargar elementos filtrados
+                    loadElements();
                 };
 
                 filterSection.appendChild(btn);
             });
         }
 
-        // Inicializar página
         loadCategories();
         loadElements();
 
-        // Actualizar cada 5 segundos, pero no afectar el carrito
-        setInterval(loadElements, 5000);
+        setInterval(loadElements, 50009999);
 
-        // Función para ir al carrito
         document.getElementById('checkout-btn').onclick = () => {
-            window.location.href = '/checkout';
+            if (cart.length === 0) {
+                alert('Por favor, seleccione al menos un elemento antes de proceder al checkout.');
+            } else {
+                window.location.href = '/checkout';
+            }
         };
     </script>
 </body>

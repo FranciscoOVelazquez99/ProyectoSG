@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Órdenes</title>
+    <style>
+        .order-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+        }
+
+        .order-header {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .element-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .element-row input {
+            width: 60px;
+        }
+
+        .location-info {
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .order-footer {
+            margin-top: 20px;
+        }
+
+        .order-footer select, .order-footer button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Órdenes</h1>
+    
+    <form action="/update_order" method="POST">
+        {% for order in orders %}
+        <div class="order-card">
+            <div class="order-header">Orden #{{ order.IDorder }} - Estado: {{ order.state }}</div>
+
+            <div class="location-info">
+                <strong>Localización:</strong> {{ order.location_info.name }} ({{ order.location_info.planta }})
+            </div>
+
+            <div class="elements-list">
+                <h4>Elementos:</h4>
+                {% for element in order.order_elements %}
+                <div class="element-row">
+                    <span>{{ element.element.name }} (Disponible: {{ element.element.candisp }})</span>
+                    <input type="number" name="cant" value="{{ element.cant }}" max="{{ element.element.candisp }}" min="0">
+                    <input type="hidden" name="IDelement" value="{{ element.IDelement }}">
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="order-footer">
+                <label for="state">Estado:</label>
+                <select name="state">
+                    <option value="Pendiente" {% if order.state == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="Entregado" {% if order.state == 'Entregado' %}selected{% endif %}>Entregado</option>
+                    <option value="Devuelto" {% if order.state == 'Devuelto' %}selected{% endif %}>Devuelto</option>
+                    <option value="Cancelada" {% if order.state == 'Cancelada' %}selected{% endif %}>Cancelada</option>
+                </select>
+
+                <input type="hidden" name="IDorder" value="{{ order.IDorder }}">
+
+                <button type="submit">Aceptar</button>
+            </div>
+        </div>
+        {% endfor %}
+    </form>
+</body>
+</html>

@@ -4,34 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carrito</title>
+    <style>
+        body{
+            background: linear-gradient(90deg, #0700b8 0%, #00ff88 100%);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            gap: 10px;
+        }
+        .cart-dataform{
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .cart-dataform h2{
+            align-self: center;
+        }
+        .element-card{
+            columns: 100px 3;
+        }
+        .card-section{
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .card-btns{
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 10vh;
+        }
+        .confirm-btn, .back-btn{
+            padding: 5px;
+            border-radius: 10px;
+            
+            transition: transform 0.5s ease-in-out;
+            font-size: 3rem;
+        }
+
+        .confirm-btn{
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #00ff11;
+        }
+        .back-btn{
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #ffffff;
+        }
+
+        .confirm-btn, .back-btn:hover{
+            transform: scale(1.1);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div id="cart-section"></div>
-    
-    <!-- Selector de fecha para la orden -->
-    <input type="date" id="order-date" value="{{ date }}" required />
+    <div id="cart-section" class="card-section"></div>
 
-    <!-- Selector del orario para la orden -->
-    <input type="time" id="order-time" value="" required/>
+    <div class="cart-dataform">
+        <h2>Realiza tu pedido</h2>
+        <!-- Selector de fecha para la orden -->
+        <p>Pedido a mombre de {{ current_user.username }}.</p>
+        <p>Fecha para la entrega del pedido.</p>
+        <input type="date" id="order-date" value="{{ date }}" required />
 
-    <!-- Selector de localización -->
-    <label for="location-select">Seleccionar localización:</label>
-    <select id="location-select"></select>
+        <p>Horario para la entrega.</p>
+        <!-- Selector del orario para la orden -->
+        <input type="time" id="order-time" value="" required/>
 
-    <!-- Repetir pedido -->
-    <input type="checkbox" id="repeat-order" /> Repetir pedido
-    <div id="repeat-days" style="display:none;">
-        <label><input type="checkbox" value="Monday" class="repeat-day" /> Lunes</label>
-        <label><input type="checkbox" value="Tuesday" class="repeat-day" /> Martes</label>
-        <label><input type="checkbox" value="Wednesday" class="repeat-day" /> Miércoles</label>
-        <label><input type="checkbox" value="Thursday" class="repeat-day" /> Jueves</label>
-        <label><input type="checkbox" value="Friday" class="repeat-day" /> Viernes</label>
-        <label><input type="checkbox" value="Saturday" class="repeat-day" /> Sábado</label>
-        <label><input type="checkbox" value="Sunday" class="repeat-day" /> Domingo</label>
+        <!-- Selector de localización -->
+        <p>Seleccionar localización:</p>
+        <select id="location-select"></select>
+
+        <p></p>
+        <!-- Repetir pedido -->
+        <div>
+            <input type="checkbox" id="repeat-order" /> Repetir pedido
+            <div id="repeat-days" style="display:none;">
+                <label><input type="checkbox" value="Monday" class="repeat-day" /> Lunes</label>
+                <label><input type="checkbox" value="Tuesday" class="repeat-day" /> Martes</label>
+                <label><input type="checkbox" value="Wednesday" class="repeat-day" /> Miércoles</label>
+                <label><input type="checkbox" value="Thursday" class="repeat-day" /> Jueves</label>
+                <label><input type="checkbox" value="Friday" class="repeat-day" /> Viernes</label>
+                <label><input type="checkbox" value="Saturday" class="repeat-day" /> Sábado</label>
+                <label><input type="checkbox" value="Sunday" class="repeat-day" /> Domingo</label>
+            </div>
+        </div>
     </div>
+    
+        <button id="confirm-btn" class="confirm-btn"><i class="fa-solid fa-check"></i></button>
+        <button id="back-btn" class="back-btn" onclick="window.history.back();"><i class="fa-solid fa-caret-left"></i></button>
 
-    <button id="confirm-btn">Confirmar Pedido</button>
-    <button id="back-btn" onclick="window.history.back();">Retroceder</button>
 
     <script>
         let cartItems = JSON.parse(localStorage.getItem('cart')) || [];  // Guardar el carrito en localStorage
@@ -58,26 +140,42 @@
             cartSection.innerHTML = '';  // Limpiar el carrito
 
             cartItems.forEach(item => {
+                // Contenedor principal para el item
                 const div = document.createElement('div');
-                div.textContent = `${item.name} (Cantidad disponible: ${item.candisp})`;
-                
+                div.className = `element-card`;
+
+                // Crear un div para el texto
+                const textDiv = document.createElement('div');
+                textDiv.textContent = `${item.name} (Cantidad disponible: ${item.candisp})`;
+
+                // Crear un div para el input
+                const inputDiv = document.createElement('div');
                 const input = document.createElement('input');
                 input.type = 'number';
                 input.value = item.quantity;
                 input.max = item.candisp;
+                input.min = 1;
                 input.onchange = (e) => {
                     item.quantity = parseInt(e.target.value);
                 };
+                inputDiv.appendChild(input);
 
+                // Crear un div para el botón de eliminar
+                const buttonDiv = document.createElement('div');
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = 'Eliminar';
                 deleteBtn.onclick = () => {
                     cartItems = cartItems.filter(i => i.IDelement !== item.IDelement);
                     renderCart();  // Volver a renderizar el carrito
                 };
+                buttonDiv.appendChild(deleteBtn);
 
-                div.appendChild(input);
-                div.appendChild(deleteBtn);
+                // Agregar los divs al contenedor principal (element-card)
+                div.appendChild(textDiv);
+                div.appendChild(inputDiv);
+                div.appendChild(buttonDiv);
+
+                // Agregar el contenedor principal al carrito
                 cartSection.appendChild(div);
             });
         }
@@ -90,6 +188,10 @@
 
         // Función para confirmar el pedido
         document.getElementById('confirm-btn').onclick = async () => {
+            if(cartItems.length === 0){
+                alert('Por favor, seleccione al menos un elemento antes de proceder.');
+            }
+
             const selectedDays = Array.from(document.querySelectorAll('.repeat-day:checked'))
                                       .map(day => day.value);  // Obtener los días seleccionados
 

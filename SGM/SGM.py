@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date,
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker,declarative_base
 import os
-import json
+import json   
 from sqlalchemy.dialects.mysql import INTEGER
 from datetime import datetime, time
 
@@ -173,7 +173,7 @@ class Task(db.Model):
 
 with app.app_context():
     # Now you can perform operations like creating tables
-    db.create_all()
+    db.create_all() 
 
 # Crear una base de datos SQLite
 engine = create_engine('sqlite:///database.db')

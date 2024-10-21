@@ -27,7 +27,7 @@
     display: flex;
     gap: 10px;
     flex-direction: column;
-    height: 90vh;
+    
   }
   .users-container {
     background-color: #1c1c1c;
@@ -40,7 +40,7 @@
     display: flex;
     gap: 10px;
     flex-direction: column;
-    height: 90vh;
+    
     overflow-y: scroll;
   }
   

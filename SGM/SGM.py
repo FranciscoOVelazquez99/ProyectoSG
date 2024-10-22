@@ -1,6 +1,7 @@
-from flask import Flask, render_template, url_for, redirect, request, flash, session,send_from_directory, jsonify
+from flask import Flask, render_template, url_for, redirect, abort, request, flash, session,send_from_directory, jsonify
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
+from functools import wraps
 from wtforms import StringField, PasswordField, SelectField , SubmitField
 from wtforms.validators import InputRequired, Length, DataRequired
 from flask_bcrypt import Bcrypt
@@ -40,9 +41,7 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 
-@login_manager.user_loader
-def load_user(IDuser):
-    return User.query.get(int(IDuser))
+
 
 # Crear una instancia base para las clases de las tablas
 Base = declarative_base()
@@ -56,7 +55,10 @@ class User(db.Model, UserMixin):
     userclass = Column(String(255), nullable=False)
     useravatar = Column(String(255), nullable=True)
     def get_id(self):
-            return (self.IDuser)
+        return str(self.IDuser)
+    
+    def has_role(self, role):
+        return self.userclass == role
     
     __table_args__ = (
         CheckConstraint('length(userpass) >= 8', name='userpass_check'),
@@ -214,7 +216,9 @@ class LoginForm(FlaskForm):
     submit = SubmitField('iniciar sesión')
 
 ###
-
+@login_manager.user_loader
+def load_user(IDuser):
+    return User.query.get(int(IDuser))
 
 def validate_username(username):
     existing_user_username = User.query.filter_by(
@@ -222,7 +226,26 @@ def validate_username(username):
     if existing_user_username:
         return True
 
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or not current_user.has_role(role):
+                abort(403)  # Forbidden access
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
+
+def roles_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or not current_user.userclass in roles:
+                abort(403)  # Forbidden access
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 ############################ Login ###################################################
 @app.route('/')
@@ -282,6 +305,8 @@ def logout():
 
 ########### registro #########
 @ app.route('/registro', methods=['GET', 'POST'])
+@login_required
+@roles_required('ADMIN')
 def registro():
     form = RegisterForm()
     users = User.query.all()

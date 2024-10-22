@@ -13,8 +13,9 @@
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    text-decoration-line: none;
+    text-decoration-line: none !important;
 }
+
 
 body {
     background-color: #f0f0f0;
@@ -67,8 +68,34 @@ body {
 
 
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='topbar.css')}}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="left-section">
+            <a href="/inicio">
+            <i class="fa-solid fa-arrow-left" style="color: #fff;"></i>
+            </a>
+            <a href="/inventario">
+                <i class="fa-solid fa-boxes" style="color: #fff;"></i>
+            </a>
+            <a href="/verif_pedidos">
+                <i class="fa-solid fa-box" style="color: #fff;"></i>
+            </a>
+        </div>
+        <div class="right-section">
+
+            <div class="user-info">
+                <span>{{ current_user.username }}</span>
+                <i class="fa-solid fa-user-tie" style="color: #fff;"></i>
+                <img src="https://via.placeholder.com/40" alt="Avatar" class="user-avatar">
+            </div>
+        </div>
+    </header>
+    <!-- Topbar -->
 
     {% if current_user.userclass=='ADMIN' %}
     <div class="grid-item">

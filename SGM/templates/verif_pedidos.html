@@ -5,8 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Órdenes</title>
     <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            text-decoration-line: none;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+
         .order-card {
-            border: 1px solid #ddd;
+            border: 1px solid #000000;
             padding: 15px;
             margin: 10px;
             border-radius: 5px;
@@ -36,17 +50,52 @@
 
         .order-footer {
             margin-top: 20px;
+    
         }
 
         .order-footer select, .order-footer button {
             margin-right: 10px;
+            border-radius: 5px;
+        }
+
+        .order-form {
+            border-style: none none none solid;
+            border-left-width: 2px;
+            border-color: darkgreen;
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='topbar.css')}}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="left-section">
+            <a href="/inicio">
+            <i class="fa-solid fa-arrow-left" style="color: #fff;"></i>
+            </a>
+            <a href="/inventario">
+                <i class="fa-solid fa-boxes" style="color: #fff;"></i>
+            </a>
+            <a href="/localizacion">
+                <i class="fa-solid fa-location-dot" style="color: #fff;"></i>
+            </a>
+        </div>
+        <div class="right-section">
+
+            <div class="user-info">
+                <span>{{ current_user.username }}</span>
+                <i class="fa-solid fa-user-tie" style="color: #fff;"></i>
+                <img src="https://via.placeholder.com/40" alt="Avatar" class="user-avatar">
+            </div>
+        </div>
+    </header>
+    <!-- Topbar -->
+
+
     <h1>Órdenes</h1>
     
-    <form action="/update_order" method="POST">
+    <form class="order-form" action="/update_order" method="POST">
         {% for order in orders %}
         <div class="order-card">
             <div class="order-header">Orden #{{ order.IDorder }} - Estado: {{ order.state }}</div>
@@ -77,7 +126,7 @@
 
                 <input type="hidden" name="IDorder" value="{{ order.IDorder }}">
 
-                <button type="submit">Aceptar</button>
+                <button type="submit" style="background-color: #9cb9f0">Aceptar</button>
             </div>
         </div>
         {% endfor %}

@@ -226,17 +226,6 @@ def validate_username(username):
     if existing_user_username:
         return True
 
-def role_required(role):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated or not current_user.has_role(role):
-                abort(403)  # Forbidden access
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-
 def roles_required(*roles):
     def decorator(f):
         @wraps(f)
@@ -333,6 +322,8 @@ def registro():
 
 # Ruta para eliminar un usuario existente
 @app.route('/borrar_usuario/<int:user_id>', methods=['POST'])
+@login_required
+@roles_required('ADMIN')
 def borrar_usuario(user_id):
     user = User.query.get_or_404(user_id)
     

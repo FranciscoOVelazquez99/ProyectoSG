@@ -32,7 +32,11 @@
             font-size: 1.5em;
             margin-bottom: 10px;
         }
-
+        .element-list{
+            margin-bottom: 10px;
+            overflow-y: scroll;
+            height: 100px;
+        }
         .element-row {
             display: flex;
             justify-content: space-between;
@@ -61,6 +65,9 @@
         .order-form {
             border-style: none none none solid;
             border-left-width: 2px;
+            
+        }
+        .expanded{
             border-color: darkgreen;
         }
     </style>
@@ -93,15 +100,20 @@
     <!-- Topbar -->
 
 
-    <h1>Órdenes</h1>
-    
-    <form class="order-form" action="/update_order" method="POST">
-        {% for order in orders %}
+    <h1 style="margin-top: 15px;">Órdenes</h1>
+    {% for order in orders %}
+    <form class="order-form" action="/update_order" method="POST" style="{% if order.state == 'Entregado' %}border-color: darkgreen;{% elif order.state == 'Pendiente' %}border-color: darkred;{% else %}border-color: darkblue;{% endif %}">
+        
         <div class="order-card">
             <div class="order-header">Orden #{{ order.IDorder }} - Estado: {{ order.state }}</div>
 
             <div class="location-info">
-                <strong>Localización:</strong> {{ order.location_info.name }} ({{ order.location_info.planta }})
+                <div>
+                    <strong>Pedido por:</strong> {{ order.User.username }}
+                </div>
+                <div>
+                    <strong>Localización:</strong> {{ order.location_info.name }} ({{ order.location_info.planta }})
+                </div>
             </div>
 
             <div class="elements-list">
@@ -109,7 +121,10 @@
                 {% for element in order.order_elements %}
                 <div class="element-row">
                     <span>{{ element.element.name }} (Disponible: {{ element.element.candisp }})</span>
-                    <input type="number" name="cant" value="{{ element.cant }}" max="{{ element.element.candisp }}" min="0">
+                    <input type="number" name="cant" value="{{ element.cant }}" min="0"
+                           data-original-value="{{ element.cant }}"
+                           data-max-available="{{ element.element.candisp }}"
+                           {% if order.state == 'Entregado' %}disabled{% endif %}>
                     <input type="hidden" name="IDelement" value="{{ element.IDelement }}">
                 </div>
                 {% endfor %}
@@ -117,7 +132,7 @@
 
             <div class="order-footer">
                 <label for="state">Estado:</label>
-                <select name="state">
+                <select name="state" data-estado-actual="{{ order.state }}">
                     <option value="Pendiente" {% if order.state == 'Pendiente' %}selected{% endif %}>Pendiente</option>
                     <option value="Entregado" {% if order.state == 'Entregado' %}selected{% endif %}>Entregado</option>
                     <option value="Devuelto" {% if order.state == 'Devuelto' %}selected{% endif %}>Devuelto</option>
@@ -129,7 +144,104 @@
                 <button type="submit" style="background-color: #9cb9f0">Aceptar</button>
             </div>
         </div>
-        {% endfor %}
+        
     </form>
+    {% endfor %}
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.order-form').forEach(function(form) {
+        manejarEstadoInputs(form);
+    });
+
+    document.querySelectorAll('.order-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            card.classList.toggle('expanded');
+        });
+    });
+
+    function manejarEstadoInputs(formulario) {
+        const estadoActual = formulario.querySelector('select[name="state"]').getAttribute('data-estado-actual');
+        const inputs = formulario.querySelectorAll('input[name="cant"]');
+
+        inputs.forEach(input => {
+            if (estadoActual === 'Entregado') {
+                input.disabled = true;
+            } else if (estadoActual === 'Devuelto') {
+                input.disabled = false;
+                input.removeAttribute('max');
+            } else {
+                input.disabled = false;
+                input.max = input.getAttribute('data-max-available');
+            }
+        });
+    }
+
+    function verificarCantidadesYEstado(event) {
+        event.preventDefault();
+        
+        const formulario = event.target;
+        const estadoSeleccionado = formulario.querySelector('select[name="state"] option:checked').value;
+        const estadoActual = formulario.querySelector('select[name="state"]').getAttribute('data-estado-actual');
+        
+        if (estadoSeleccionado === estadoActual) {
+            alert('El estado seleccionado es el mismo que el actual. No se realizará ningún cambio.');
+            return;
+        }
+
+        const inputs = formulario.querySelectorAll('input[name="cant"]');
+        let cantidadesValidas = true;
+
+        if (estadoSeleccionado === 'Devuelto') {
+            inputs.forEach(input => {
+                input.disabled = false;
+                input.removeAttribute('max');
+            });
+            formulario.submit();
+            return;
+        }
+
+        inputs.forEach(input => {
+            const cantidadDisponible = parseInt(input.getAttribute('data-max-available'));
+            const cantidadIngresada = parseInt(input.value);
+
+            if (estadoSeleccionado === 'Entregado' && cantidadIngresada > cantidadDisponible) {
+                cantidadesValidas = false;
+            }
+        });
+
+
+        if (estadoSeleccionado === 'Entregado' && !cantidadesValidas) {
+            alert('La cantidad ingresada es mayor a la disponible para uno o más elementos. No se puede entregar.');
+        } else {
+            manejarEstadoInputs(formulario);
+            formulario.submit();
+        }
+    }
+
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', verificarCantidadesYEstado);
+
+        form.querySelector('select[name="state"]').addEventListener('change', function() {
+            const estadoSeleccionado = this.value;
+            const inputs = form.querySelectorAll('input[name="cant"]');
+
+            inputs.forEach(input => {
+                if (estadoSeleccionado === 'Entregado') {
+                    input.disabled = true;
+                } else if (estadoSeleccionado === 'Devuelto') {
+                    input.disabled = false;
+                    input.removeAttribute('max');
+                } else {
+                    input.disabled = false;
+                    input.max = input.getAttribute('data-max-available');
+                }
+            });
+        });
+    });
+});
+</script>
+
 </body>
 </html>

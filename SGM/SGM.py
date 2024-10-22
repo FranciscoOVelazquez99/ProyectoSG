@@ -126,6 +126,7 @@ class Order(db.Model):
 
     # Relación con la tabla Location
     location_info = db.relationship('Location', backref='orders')
+    User = db.relationship('User', backref='orders')
     
     # Relación con la tabla OrderElement (para obtener los elementos en la orden)
     order_elements = db.relationship('OrderElement', backref='order')
@@ -628,6 +629,8 @@ def show_orders():
     orders = Order.query.join(Location, Location.id == Order.location) \
                         .join(OrderElement, Order.IDorder == OrderElement.IDorder) \
                         .join(Element, Element.IDelement == OrderElement.IDelement) \
+                        .join(User, User.IDuser == Order.IDuser) \
+                        .order_by(Order.state.desc(), Order.IDorder.desc()) \
                         .all()
 
 
@@ -643,60 +646,51 @@ def update_order():
     # Obtener la orden que queremos actualizar
     order = Order.query.filter_by(IDorder=data['IDorder']).first()
     
-    if data['state'] == 'Entregado':
-        # Actualizar el estado de la orden
-        order.state = data['state']
-        
-        # Actualizar la cantidad disponible de cada elemento y la cantidad en la orden
-        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
-            # Actualizar la tabla 'OrderElement'
-            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
-            order_element.cant = int(cant)
-            
-            # Restar la cantidad disponible en la tabla 'Element'
-            element = Element.query.filter_by(IDelement=elm_id).first()
-            element.candisp -= int(cant)
-            
-        # Guardar cambios en la base de datos
-        db.session.commit()
-    elif data['state'] == 'Pendiente':
-                
-        order.state = data['state']
-        
-        
-        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
-            
-            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
-            order_element.cant = int(cant)
+    if order is None:
+        flash('Orden no encontrada', 'error')
+        return redirect('/orders')
 
-       
-        db.session.commit()
+    new_state = data['state']
+    old_state = order.state
 
-    elif data['state'] == 'Devuelto':
-                
-        order.state = data['state']
-        
-        
-        for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
-            
-            order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
-            order_element.cant = int(cant)
-            
-            # Sunma la cantidad disponible en la tabla 'Element'
-            element = Element.query.filter_by(IDelement=elm_id).first()
-            element.candisp += int(cant)
-        
-        db.session.commit()
+    # Actualizar el estado de la orden
+    order.state = new_state
 
-    elif data['state'] == 'Cancelada':
-                
-        # Primero eliminamos los elementos asociados a la orden en la tabla 'OrderElement'
+    for elm_id, cant in zip(data.getlist('IDelement'), data.getlist('cant')):
+        order_element = OrderElement.query.filter_by(IDelement=elm_id, IDorder=order.IDorder).first()
+        element = Element.query.filter_by(IDelement=elm_id).first()
+
+        if order_element is None or element is None:
+            continue
+
+        new_cant = int(cant)
+        old_cant = order_element.cant
+
+        # Actualizar la cantidad en OrderElement
+        order_element.cant = new_cant
+
+        # Ajustar la cantidad disponible en Element
+        if old_state == 'Entregado' and new_state != 'Entregado':
+            # Si el estado anterior era 'Entregado', devolvemos los elementos al inventario
+            element.candisp += old_cant
+        elif old_state != 'Entregado' and new_state == 'Entregado':
+            # Si el nuevo estado es 'Entregado', restamos los elementos del inventario
+            element.candisp -= new_cant
+        elif new_state == 'Devuelto':
+            # Si el nuevo estado es 'Devuelto', sumamos la diferencia al inventario
+            element.candisp += (new_cant - old_cant)
+
+    if new_state == 'Cancelada':
+        # Si el nuevo estado es 'Cancelada', eliminamos la orden y sus elementos
         OrderElement.query.filter_by(IDorder=order.IDorder).delete()
-
-        # Ahora eliminamos la orden en si
         db.session.delete(order)
-
+    
+    try:
         db.session.commit()
+        flash('Orden actualizada con éxito', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar la orden: {str(e)}', 'error')
 
     return redirect('/orders')
 

@@ -21,11 +21,27 @@
             align-items: center;
             justify-items: center;
             justify-content: center;
+            
+            border-radius: 10px;
         }
         .inventory-item img {
             max-width: 100%;
             height: auto;
         }
+        .inventory-item-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            background-color: cornflowerblue;
+            padding: 5px;
+            border-radius: 0px 0px 5px 5px;
+        }
+
+        .filtro-categories{
+            background-color: cornflowerblue;
+            padding: 5px;
+            border-radius: 5px 5px 0px 0px;
+        }
+
     </style>
 </head>
 <body>
@@ -55,9 +71,10 @@
     <div class="container mt-4">
         <!-- Barra de acciones -->
         <div class="d-flex justify-content-between mb-3">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCategoryModal">Crear Categoría</button>
-            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#uploadElementModal">Subir Elemento</button>
-
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="height: min-content;" data-bs-toggle="modal" data-bs-target="#createCategoryModal">Crear Categoría</button>
+                <button class="btn btn-secondary" style="height: min-content;" data-bs-toggle="modal" data-bs-target="#uploadElementModal">Subir Elemento</button>
+            </div>
             <!-- Filtros -->
             <div class="d-flex">
                 <input type="text" id="filterName" class="form-control me-2" placeholder="Buscar por nombre">
@@ -71,7 +88,7 @@
             </div>
         </div>
         {% if filtro %}
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px;" class="mb-3 filtro-categories">
             {% for category in filtro %}
                 <div style="border-bottom: solid;">
                     {{ category.name }}
@@ -85,17 +102,21 @@
             {% if elements %}
             {% for element in elements %}
             {% if element.disp == True %}
-                <div class="inventory-item"  style="background-color: aqua;" >
+                <div class="inventory-item"  style="background-color: #0d6efd;;" >
             {% else %}
                 <div class="inventory-item"  style="background-color: rgb(196, 196, 196);" >
             {% endif %}
                 <img src="static/uploads/{{ element.img }}" alt="{{ element.name }}">
-                <p>{{ element.name }}</p>
-                <p>Cantidad: {{ element.cantotal }}</p>
-                <p>Cantidad disponible: {{ element.candisp }}</p>
+                <div class="inventory-item-name">
+                    <p style="margin: 0;">{{ element.name }}</p>
+                </div>
+                <div>
+                    <p>Cantidad: {{ element.cantotal }}</p>
+                    <p>Cantidad disponible: {{ element.candisp }}</p>
+                </div>
                <div style="align-self: self-end;">
                     <form action="{{ url_for('borrar_elemento', IDelement=element.IDelement) }}" method="post" style="display: inline;">
-                        <input class="btn btn-primary btn-sm" style="--bs-btn-line-height: 0.7;" type="submit" value="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este elemento?')">
+                        <input class="btn btn-warning btn-sm" style="--bs-btn-line-height: 0.7;" type="submit" value="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este elemento?')">
                     </form>
                 </div> 
             </div>

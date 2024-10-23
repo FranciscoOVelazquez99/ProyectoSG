@@ -125,7 +125,6 @@ class Order(db.Model):
     time = Column(Time, nullable=False)
     date = Column(Date, nullable=False)
     location = Column(Integer, ForeignKey('location.id'))  # FK con Location
-    repeat = db.Column(db.Boolean, nullable=True)
     finish = Column(Date, nullable=True)
     state = Column(String(255), nullable=False)
 
@@ -681,7 +680,7 @@ def checkout():
     
     if request.method == 'POST':
         data = request.json  # Datos enviados desde el frontend (elementos seleccionados, cantidades, etc.)
-        IDuser = current_user.IDuser # Obtener IDuser desde sesión o autenticación (esto es un ejemplo)
+        IDuser = current_user.IDuser 
 
         # Convertir la fecha enviada como string a un objeto datetime.date
         order_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
@@ -695,7 +694,6 @@ def checkout():
             date=order_date,  # Pasamos la fecha como un objeto date de Python
             time=order_time,
             location=data['location'],  # Localización seleccionada por el usuario
-            repeat = data['repeat'],
             state='Pendiente'
         )
         db.session.add(new_order)
@@ -705,12 +703,6 @@ def checkout():
         for item in data['items']:
             order_element = OrderElement(IDorder=new_order.IDorder, IDelement=item['IDelement'], cant=item['quantity'])
             db.session.add(order_element)
-
-        # Si se seleccionó "Repetir pedido", guardar los días de repetición
-        if data.get('repeat'):
-            for day in data['repeatDays']:
-                order_rep = OrderRep(IDorder=new_order.IDorder, repeat_day=day)
-                db.session.add(order_rep)
 
         db.session.commit()
         return jsonify({'success': True})

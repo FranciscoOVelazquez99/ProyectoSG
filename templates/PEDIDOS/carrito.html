@@ -96,20 +96,7 @@
         <select id="location-select"></select>
 
         <p></p>
-        <!-- Repetir pedido -->
-        <div>
-            <input type="checkbox" id="repeat-order" /> Repetir pedido
-            <div id="repeat-days" style="display:none;">
-                <label><input type="checkbox" value="Monday" class="repeat-day" /> Lunes</label>
-                <label><input type="checkbox" value="Tuesday" class="repeat-day" /> Martes</label>
-                <label><input type="checkbox" value="Wednesday" class="repeat-day" /> Miércoles</label>
-                <label><input type="checkbox" value="Thursday" class="repeat-day" /> Jueves</label>
-                <label><input type="checkbox" value="Friday" class="repeat-day" /> Viernes</label>
-                <label><input type="checkbox" value="Saturday" class="repeat-day" /> Sábado</label>
-                <label><input type="checkbox" value="Sunday" class="repeat-day" /> Domingo</label>
-            </div>
-        </div>
-    </div>
+        
     
         <button id="confirm-btn" class="confirm-btn"><i class="fa-solid fa-check"></i></button>
         <button id="back-btn" class="back-btn" onclick="window.history.back();"><i class="fa-solid fa-caret-left"></i></button>
@@ -180,11 +167,7 @@
             });
         }
 
-        // Mostrar/ocultar los días cuando se hace clic en el checkbox "Repetir pedido"
-        document.getElementById('repeat-order').onclick = () => {
-            const repeatDaysDiv = document.getElementById('repeat-days');
-            repeatDaysDiv.style.display = document.getElementById('repeat-order').checked ? 'block' : 'none';
-        };
+
 
         // Función para confirmar el pedido
         document.getElementById('confirm-btn').onclick = async () => {
@@ -199,8 +182,6 @@
                 date: document.getElementById('order-date').value,
                 time: document.getElementById('order-time').value,
                 location: document.getElementById('location-select').value,  // Localización seleccionada
-                repeat: document.getElementById('repeat-order').checked,
-                repeatDays: selectedDays,  // Enviar los días seleccionados
                 items: cartItems
             };
             

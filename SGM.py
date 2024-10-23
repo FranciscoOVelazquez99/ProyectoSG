@@ -835,6 +835,15 @@ def editar_nota(id_nota):
     db.session.commit()
     return jsonify({'success': True})
 
+@app.route('/borrar_nota/<int:id_nota>', methods=['POST'])
+@login_required
+def borrar_nota(id_nota):
+    nota = Nota.query.get_or_404(id_nota)
+    if nota.IDuser != current_user.IDuser:
+        abort(403)
+    db.session.delete(nota)
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 ############################ ////////////// ###################################################

@@ -50,15 +50,19 @@
             background-color: #007bff;
             color: #fff;
         }
+        .note-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="top-bar">
         <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
-        <span>{{ current_user.username }}</span>
+        <span style="background-color: #e7b36d; padding: 10px; border-radius: 5px; font-weight: bold;">{{ current_user.username }}</span>
         <div class="avatar" style="width: 40px; height: 40px; background-color: #ccc; border-radius: 50%;"></div>
     </div>
-
     <div class="content-area">
         <div class="sidebar">
             <button id="newNoteBtn" class="btn btn-primary mb-3 w-100"><i class="fas fa-plus"></i> Nueva Nota</button>
@@ -75,6 +79,9 @@
         <div class="main-content">
             <input type="text" id="noteTitle" class="form-control mb-3" placeholder="Título de la nota">
             <textarea id="noteContent" class="form-control" rows="15" placeholder="Contenido de la nota"></textarea>
+            <div class="note-actions">
+                <button id="deleteNoteBtn" class="btn btn-danger mt-3" style="display: none;"><i class="fas fa-trash"></i> Borrar Nota</button>
+            </div>
         </div>
     </div>
 
@@ -91,6 +98,7 @@
                 currentNoteId = noteId;
                 $('.note-item').removeClass('active');
                 $(`.note-item[data-id="${noteId}"]`).addClass('active');
+                $('#deleteNoteBtn').show();
             });
         }
 
@@ -112,7 +120,23 @@
                         </div>
                     `);
                     currentNoteId = data.id;
+                    $('#deleteNoteBtn').show();
                 });
+            }
+        }
+
+        function deleteNote() {
+            if (currentNoteId) {
+                if (confirm('¿Estás seguro de que quieres borrar esta nota?')) {
+                    $.post(`/borrar_nota/${currentNoteId}`, function(data) {
+                        console.log('Nota borrada');
+                        $(`.note-item[data-id="${currentNoteId}"]`).remove();
+                        $('#noteTitle').val('');
+                        $('#noteContent').val('');
+                        currentNoteId = null;
+                        $('#deleteNoteBtn').hide();
+                    });
+                }
             }
         }
 
@@ -122,6 +146,7 @@
                 $('#noteContent').val('');
                 currentNoteId = null;
                 $('.note-item').removeClass('active');
+                $('#deleteNoteBtn').hide();
             });
 
             $(document).on('click', '.note-item', function() {
@@ -130,8 +155,10 @@
 
             $('#noteTitle, #noteContent').on('input', function() {
                 clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(saveNote, 5000);
+                saveTimeout = setTimeout(saveNote, 2000);
             });
+
+            $('#deleteNoteBtn').click(deleteNote);
         });
     </script>
 </body>

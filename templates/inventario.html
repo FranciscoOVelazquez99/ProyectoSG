@@ -193,6 +193,15 @@
                         <label for="elementImage" class="form-label">Subir Imagen</label>
                         <input type="file" id="elementImage" class="form-control">
                     </div>
+
+                    <div class="mb-3">
+                        <label for="ChooseElementImage" class="form-label">Seleccionar una imagen existente</label>
+                        <select id="ChooseElementImage" class="form-select">
+                            {% for img in images %}
+                                <option value="{{ img }}">{{ img }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label for="elementCategories" class="form-label">Asignar Categorías</label>
                         <select id="elementCategories" class="form-select" multiple>
@@ -251,12 +260,17 @@
         const elementQuantity = document.getElementById('elementQuantity').value;
         const elementDescription = document.getElementById('elementDescription').value;
         const elementImage = document.getElementById('elementImage').files[0];  // Archivo de imagen
+        const ChooseElementImage = document.getElementById('ChooseElementImage').value;
         const elementCategories = Array.from(document.getElementById('elementCategories').selectedOptions)
             .map(option => option.value);  // Array de IDs de categorías seleccionadas
         
-        // Verificar que los campos obligatorios no esten vacíos
-        if (!elementName || !elementQuantity || !elementImage || elementCategories.length === 0) {
-            alert('Por favor, completa todos los campos obligatorios.');
+        // Verificar que los campos obligatorios no estén vacíos
+        if (!elementName || !elementQuantity || elementCategories.length === 0 || (!elementImage && !ChooseElementImage)) {
+            alert('Por favor, completa todos los campos obligatorios y selecciona una imagen.');
+            return;
+        }
+        if(elementImage && ChooseElementImage){
+            alert('No puedes subir una imagen y seleccionar una imagen existente al mismo tiempo.');
             return;
         }
 
@@ -267,7 +281,7 @@
         formData.append('description', elementDescription);
         formData.append('image', elementImage);  // Archivo de imagen
         formData.append('categories', JSON.stringify(elementCategories));  // Enviar categorias como JSON
-
+        formData.append('ChooseElementImage', ChooseElementImage);  // Enviar categorias como JSON
         try {
             const response = await fetch('/subir_elemento', {
                 method: 'POST',

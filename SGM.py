@@ -20,7 +20,7 @@ from datetime import datetime, time
 app = Flask(__name__)
 
 
-UPLOAD_FOLDER = 'SGM/static/uploads'
+UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif','jfif','webp'}
 
 if not os.path.exists(UPLOAD_FOLDER):
@@ -94,8 +94,11 @@ class Email(db.Model):
     __tablename__ = 'email'
    
     IDemail = Column(Integer, primary_key=True, autoincrement=True)
-    IDuser = Column(Integer, nullable=False) 
+    IDuser = Column(Integer, ForeignKey('user.IDuser'), nullable=False) 
     address = Column(String(45), nullable=False)
+
+    User = db.relationship('User', backref='email')
+
 
 class Maintenance(db.Model):
     __tablename__ = 'maintenance'
@@ -199,9 +202,23 @@ class RegisterForm(FlaskForm):
                             InputRequired(), Length(min=8, max=20)], render_kw={"placeholder": "Contraseña"})
     
     
-    rol = SelectField('Roles', choices=[('ADMIN'), ('LVL1'), ('LVL2'), ('LVL3'), ('LVL4')])
+    rol = SelectField('Roles', choices=[('ADMIN'), ('LVL1'), ('LVL2'), ('LVL3'), ('LVL4')], default='LVL1')
 
     submit = SubmitField('Registrar')
+
+
+class EditForm(FlaskForm):
+    username = StringField(validators=[
+                           InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Usuario"})
+    email = StringField(validators=[
+                            Length(max=45)], render_kw={"placeholder": "Email"})
+    
+    password = PasswordField(validators=[
+                            Length(min=8, max=20)], render_kw={"placeholder": "Contraseña"})
+    
+    rol = SelectField('Roles', choices=[('Seleccione un rol'),('ADMIN'), ('LVL1'), ('LVL2'), ('LVL3'), ('LVL4')], default='Seleccione un rol')
+
+    submit = SubmitField('Editar')
 
 ###
 ######## formulario de inicio de sesion ##########
@@ -216,6 +233,16 @@ class LoginForm(FlaskForm):
     submit = SubmitField('iniciar sesión')
 
 ###
+
+def create_admin():
+    with app.app_context(): 
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', userpass=bcrypt.generate_password_hash('admin12345678'),userclass='ADMIN')
+            db.session.add(admin)
+            db.session.commit()
+
+create_admin()
+
 @login_manager.user_loader
 def load_user(IDuser):
     return User.query.get(int(IDuser))
@@ -235,6 +262,28 @@ def roles_required(*roles):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+
+def validate_email(email):
+    existing_user_email = Email.query.filter_by(
+        address=email.data).first()
+    if existing_user_email:
+        return True
+
+def ramdom_string_img(filename):
+    import random
+    import string
+    
+    # Obtener el nombre y la extensión del archivo
+    nombre, extension = os.path.splitext(filename)
+    
+    # Generar una cadena aleatoria de 6 dígitos
+    cadena_aleatoria = ''.join(random.choices(string.digits, k=6))
+    
+    # Combinar el nombre original, la cadena aleatoria y la extensión
+    nuevo_nombre = f"{nombre}_{cadena_aleatoria}{extension}"
+    
+    return nuevo_nombre
 
 ############################ Login ###################################################
 @app.route('/')
@@ -298,7 +347,8 @@ def logout():
 @roles_required('ADMIN')
 def registro():
     form = RegisterForm()
-    users = User.query.all()
+    formedit = EditForm()
+    users = User.query.join(Email,User.IDuser==Email.IDuser).all()
     if form.validate_on_submit():
         if validate_username(form.username):
             flash('El usuario ya existe.', 'warning')
@@ -317,7 +367,29 @@ def registro():
         db.session.commit()
         flash('Usuario creado.', 'success')
         return redirect(url_for('registro'))
-    return render_template('REGISTRO/index.html', users=users,form=form)
+    return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit)
+
+
+@app.route('/editar_usuario/<int:user_id>', methods=['POST'])
+@login_required
+@roles_required('ADMIN')
+def editar_usuario(user_id):
+    formedit = EditForm()
+    user = User.query.get_or_404(user_id)
+    if formedit:
+        user.username = formedit.username.data
+        if formedit.password.data:
+            user.userpass = bcrypt.generate_password_hash(formedit.password.data)
+        if formedit.rol.data != 'Seleccione un rol':
+            user.userclass = formedit.rol.data
+        db.session.commit()
+        flash('Usuario editado exitosamente!', 'success')
+
+        if formedit.email.data:
+            user.email.address = formedit.email.data
+            db.session.commit()
+        return redirect(url_for('registro'))
+    return redirect(url_for('registro'))
 
 
 # Ruta para eliminar un usuario existente
@@ -349,9 +421,10 @@ def inventario():
     # Consultar categorías y elementos desde la base de datos
     categories = Category.query.all()
     elements = Element.query.all()
-    
+    images = os.listdir(app.config['UPLOAD_FOLDER'])
+
     # Renderizar plantilla y pasar datos
-    return render_template('inventario.html', categories=categories, elements=elements)
+    return render_template('inventario.html', categories=categories, elements=elements,images=images)
 
 
 
@@ -404,20 +477,25 @@ def subir_elemento():
     description = request.form.get('description')
     categories = request.form.get('categories')
     image = request.files.get('image')
+    choose_image = request.form.get('ChooseElementImage')
 
     # Verificar si los campos obligatorios están presentes
-    if not name or not quantity or not categories or not image:
+    if not name or not quantity or not categories or (image and choose_image):
         return jsonify({'message': 'Faltan campos obligatorios.'}), 400
 
+
     # Verificar si el archivo es permitido
-    if not allowed_file(image.filename):
+    if image and not allowed_file(image.filename):
         return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
 
     # Guardar la imagen de manera segura
-    filename = secure_filename(image.filename)
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    image.save(image_path)
-    image_path='static/uploads/'+filename
+    if choose_image:
+        filename = choose_image
+    else:
+        filename = ramdom_string_img(image.filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image.save(image_path)
+        image_path='static/uploads/'+filename
     # Crear el nuevo elemento
     nuevo_elemento = Element(name=name,disp=True, cantotal=quantity,candisp=quantity, adds=description, img=filename)
 
@@ -522,14 +600,16 @@ def add_location():
         return jsonify({'message': 'Faltan campos obligatorios.'}), 400
 
     # Verificar si el archivo es permitido
-    if not allowed_file(image.filename):
-        return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
-
-    # Guardar la imagen de manera segura
-    filename = secure_filename(image.filename)
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    image.save(image_path)
-    image_path='static/uploads/'+filename
+    if image:
+        if not allowed_file(image.filename):
+            return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
+        # Guardar la imagen de manera segura
+        filename = secure_filename(image.filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image.save(image_path)
+        image_path='static/uploads/'+filename
+    else:
+        filename = 'building.png'
     # Crear el nuevo elemento
     nueva_localizacion = Location(name=name, planta=planta, descrip=description, img=filename)
 

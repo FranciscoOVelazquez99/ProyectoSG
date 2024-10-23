@@ -82,7 +82,7 @@ body {
             <a href="/inventario">
                 <i class="fa-solid fa-boxes" style="color: #fff;"></i>
             </a>
-            <a href="/verif_pedidos">
+            <a href="/orders">
                 <i class="fa-solid fa-box" style="color: #fff;"></i>
             </a>
         </div>
@@ -174,7 +174,7 @@ body {
         
         
         // Verificar que los campos obligatorios no estén vacíos
-        if (!locationName || !locationFloor || !locationImage === 0) {
+        if (!locationName || !locationFloor) {
             alert('Por favor, completa todos los campos obligatorios.');
             return;
         }

@@ -8,7 +8,7 @@ from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import extract
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, Text, Time, CheckConstraint
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, DateTime, Text, Time, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker,declarative_base
 import os
@@ -175,6 +175,19 @@ class Task(db.Model):
     fecha_fin = Column(Date, nullable=False)
     prioridad = Column(String(255), nullable=True)
     estado = Column(String(255), nullable=True)
+
+class Nota(db.Model):
+    __tablename__ = 'notas'
+   
+    IDnota = Column(Integer, primary_key=True, autoincrement=True)
+    IDuser = Column(Integer, ForeignKey('user.IDuser'), nullable=False)
+    titulo = Column(String(255), nullable=False)
+    contenido = Column(Text, nullable=True)
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='notas')
+
+
 
 with app.app_context():
     # Now you can perform operations like creating tables
@@ -781,6 +794,48 @@ def update_order():
         flash(f'Error al actualizar la orden: {str(e)}', 'error')
 
     return redirect('/orders')
+
+############### notas ###############
+
+@app.route('/notas')
+@login_required
+def notas():
+    notas_usuario = Nota.query.filter_by(IDuser=current_user.IDuser).order_by(Nota.fecha_creacion.desc()).all()
+    return render_template('notas.html', notas=notas_usuario)
+
+@app.route('/get_nota/<int:id_nota>')
+@login_required
+def get_nota(id_nota):
+    nota = Nota.query.get_or_404(id_nota)
+    if nota.IDuser != current_user.IDuser:
+        abort(403)
+    return jsonify({
+        'titulo': nota.titulo,
+        'contenido': nota.contenido
+    })
+
+@app.route('/crear_nota', methods=['POST'])
+@login_required
+def crear_nota():
+    titulo = request.form.get('titulo')
+    contenido = request.form.get('contenido')
+    nueva_nota = Nota(IDuser=current_user.IDuser, titulo=titulo, contenido=contenido)
+    db.session.add(nueva_nota)
+    db.session.commit()
+    return jsonify({'id': nueva_nota.IDnota})
+
+@app.route('/editar_nota/<int:id_nota>', methods=['POST'])
+@login_required
+def editar_nota(id_nota):
+    nota = Nota.query.get_or_404(id_nota)
+    if nota.IDuser != current_user.IDuser:
+        abort(403)
+    nota.titulo = request.form.get('titulo')
+    nota.contenido = request.form.get('contenido')
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 
 ############################ ////////////// ###################################################
 

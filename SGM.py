@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship, sessionmaker,declarative_base
 import os
 import json   
 from sqlalchemy.dialects.mysql import INTEGER
-from datetime import datetime, time
+from datetime import date, timedelta,datetime
 
 
 app = Flask(__name__)
@@ -104,10 +104,13 @@ class Maintenance(db.Model):
     __tablename__ = 'maintenance'
    
     IDmaintenance = Column(Integer, primary_key=True, autoincrement=True)
-    date = Column(Date, nullable=False)
-    details = Column(String(255), nullable=True)
-    repeat = db.Column(db.Boolean, nullable=True)
-    state = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(String(255), nullable=True)
+    frequency = Column(Integer, nullable=False) #cada cuantos dias se realiza
+    date = Column(Date, nullable=False) #fecha de inicio
+    next_date = Column(Date, nullable=False) #fecha de la proxima revision
+    state = Column(String(255), nullable=False) #Programado, en curso, finalizado
+
 
 class MaintenanceElement(db.Model):
     __tablename__ = 'maintenance_elm'
@@ -116,6 +119,9 @@ class MaintenanceElement(db.Model):
     IDelement = Column(Integer, ForeignKey('elements.IDelement'))
     revised = Column(Integer, nullable=True)
     details = Column(String(255), nullable=True)
+
+    # Agregar esta línea para establecer la relación con Element
+    element = db.relationship('Element', backref='maintenance_elements')
 
 class Order(db.Model):
     __tablename__ = 'orders'
@@ -360,7 +366,9 @@ def logout():
 def registro():
     form = RegisterForm()
     formedit = EditForm()
-    users = User.query.join(Email,User.IDuser==Email.IDuser).all()
+    
+    users = User.query.outerjoin(Email, User.IDuser == Email.IDuser).all()
+
     if form.validate_on_submit():
         if validate_username(form.username):
             flash('El usuario ya existe.', 'warning')
@@ -394,11 +402,19 @@ def editar_usuario(user_id):
             user.userpass = bcrypt.generate_password_hash(formedit.password.data)
         if formedit.rol.data != 'Seleccione un rol':
             user.userclass = formedit.rol.data
-        db.session.commit()
+            db.session.commit()
         flash('Usuario editado exitosamente!', 'success')
 
         if formedit.email.data:
-            user.email.address = formedit.email.data
+            # Verificar si el usuario ya tiene un email asociado
+            existing_email = Email.query.filter_by(IDuser=user.IDuser).first()
+            if existing_email:
+                # Si existe, actualizar la dirección de correo
+                existing_email.address = formedit.email.data
+            else:
+                # Si no existe, crear un nuevo registro de email
+                new_email = Email(IDuser=user.IDuser, address=formedit.email.data)
+                db.session.add(new_email)
             db.session.commit()
         return redirect(url_for('registro'))
     return redirect(url_for('registro'))
@@ -434,7 +450,6 @@ def inventario():
     categories = Category.query.all()
     elements = Element.query.all()
     images = os.listdir(app.config['UPLOAD_FOLDER'])
-
     # Renderizar plantilla y pasar datos
     return render_template('inventario.html', categories=categories, elements=elements,images=images)
 
@@ -555,6 +570,7 @@ def filtrar_elementos():
     # Obtener los filtros de la URL
     name_filter = request.args.get('name', '').strip()
     categories_filter = request.args.get('categories', '')
+    images = os.listdir(app.config['UPLOAD_FOLDER'])
 
     # Iniciar una consulta base para los elementos
     query = db.session.query(Element)
@@ -580,9 +596,9 @@ def filtrar_elementos():
 
     # Renderizar la plantilla con los elementos filtrados
     if filtro:
-        return render_template('inventario.html', categories=categorias, elements=elementos_filtrados,filtro=filtro)
+        return render_template('inventario.html', categories=categorias, elements=elementos_filtrados,filtro=filtro,images=images)
     
-    return render_template('inventario.html', categories=categorias, elements=elementos_filtrados)
+    return render_template('inventario.html', categories=categorias, elements=elementos_filtrados,images=images)
 
 ########### /////////// #########
 
@@ -844,6 +860,147 @@ def borrar_nota(id_nota):
     db.session.delete(nota)
     db.session.commit()
     return jsonify({'success': True})
+
+
+############### /////////// ###############
+
+############################ mantenimientos ###################################################
+
+@app.route('/mantenimientos')
+@login_required
+def mantenimientos():
+    maintenances = Maintenance.query.all()
+    return render_template('mantenimientos.html', maintenances=maintenances)
+
+@app.route('/crear_mantenimiento', methods=['POST'])
+@login_required
+def crear_mantenimiento():
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No se recibieron datos JSON'}), 400
+    
+    try:
+        start_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        new_maintenance = Maintenance(
+            name=data['name'],
+            description=data['description'],
+            frequency=int(data['frequency']),
+            date=start_date,
+            next_date=start_date + timedelta(days=int(data['frequency'])),
+            state=data['state']
+        )
+        db.session.add(new_maintenance)
+        db.session.commit()
+        return jsonify({'id': new_maintenance.IDmaintenance, 'message': 'Mantenimiento creado con éxito'}), 201
+    except KeyError as e:
+        return jsonify({'error': f'Falta el campo requerido: {str(e)}'}), 400
+    except ValueError as e:
+        return jsonify({'error': f'Error de valor: {str(e)}'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al crear el mantenimiento: {str(e)}'}), 500
+
+
+@app.route('/editar_mantenimiento/<int:id>', methods=['POST'])
+@login_required
+def editar_mantenimiento(id):
+    maintenance = Maintenance.query.get_or_404(id)
+    data = request.json
+    maintenance.name = data['name']
+    maintenance.description = data['description']
+    maintenance.frequency = data['frequency']
+    maintenance.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+    maintenance.next_date = maintenance.date + timedelta(days=int(data['frequency']))
+    maintenance.state = data['state']
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/eliminar_mantenimiento/<int:id>', methods=['POST'])
+@login_required
+def eliminar_mantenimiento(id):
+    maintenance = Maintenance.query.get_or_404(id)
+    db.session.delete(maintenance)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/get_mantenimiento/<int:id>')
+@login_required
+def get_mantenimiento(id):
+    maintenance = Maintenance.query.get_or_404(id)
+    return jsonify({
+        'IDmaintenance': maintenance.IDmaintenance,
+        'name': maintenance.name,
+        'description': maintenance.description,
+        'frequency': maintenance.frequency,
+        'date': maintenance.date.strftime('%Y-%m-%d'),
+        'next_date': maintenance.next_date.strftime('%Y-%m-%d'),
+        'state': maintenance.state
+    })
+
+@app.route('/elementos/<int:id_maintenance>')
+@login_required
+def elementos(id_maintenance):
+    maintenance = Maintenance.query.get_or_404(id_maintenance)
+    maintenance_elements = MaintenanceElement.query.filter_by(IDmaintenance=id_maintenance).all()
+    available_elements = Element.query.all()
+    return render_template('elementos.html', maintenance=maintenance, maintenance_elements=maintenance_elements, available_elements=available_elements)
+
+@app.route('/asignar_elemento/<int:id_maintenance>', methods=['POST'])
+@login_required
+def asignar_elemento(id_maintenance):
+    if request.is_json:
+        data = request.json
+    else:
+        data = request.form
+
+    element_id = data.get('element_id')
+    
+    if not element_id:
+        return jsonify({'error': 'No se proporcionó un ID de elemento válido'}), 400
+
+    new_maintenance_element = MaintenanceElement(
+        IDmaintenance=id_maintenance,
+        IDelement=element_id,
+        revised=False,
+        details=''
+    )
+    db.session.add(new_maintenance_element)
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Elemento asignado correctamente'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al asignar el elemento: {str(e)}'}), 500
+
+@app.route('/actualizar_revision/<int:id>', methods=['POST'])
+@login_required
+def actualizar_revision(id):
+    maintenance_element = MaintenanceElement.query.get_or_404(id)
+    maintenance_element.revised = request.json['revised']
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/actualizar_detalles/<int:id>', methods=['POST'])
+@login_required
+def actualizar_detalles(id):
+    maintenance_element = MaintenanceElement.query.get_or_404(id)
+    maintenance_element.details = request.json['details']
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/eliminar_elemento_mantenimiento/<int:id>', methods=['POST'])
+@login_required
+def eliminar_elemento_mantenimiento(id):
+    maintenance_element = MaintenanceElement.query.get_or_404(id)
+    db.session.delete(maintenance_element)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+############### /////////// ###############
+
+
 
 
 ############################ ////////////// ###################################################

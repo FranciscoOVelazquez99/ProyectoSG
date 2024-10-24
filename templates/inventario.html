@@ -8,6 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        .body{
+            padding: 20px;
+        }
         .inventory-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -41,14 +44,62 @@
             padding: 5px;
             border-radius: 5px 5px 0px 0px;
         }
-
+        .filtro-inputs{
+            background-color: cornflowerblue;
+            padding: 5px;
+            border-radius: 5px 0px 0px 5px;
+        }
+        .desplegar-filtro-button{
+            background-color: cornflowerblue;
+            padding: 5px;
+            border-radius: 5px 0px 0px 5px;
+        }
+        .filtro-inputs{
+            display: none;
+            transition: display 0.3s ease-in-out;
+            height: 10vh;
+            
+        }
+        .filtro-container{
+            position: absolute;
+            top: 70px;
+            right: 0;
+            z-index: 1000;
+        }
+        .categories-container{
+            display: flex;
+            gap: 5px;
+            align-content: center;
+            align-items: center;
+            justify-items: center;
+            padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap)* .5);
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
 
+    <div class="filtro-container">
+        <!-- Filtros -->
+        <div class="filtro-inputs">
+            <input type="text" id="filterName" class="form-control me-2" placeholder="Buscar por nombre">
+            <select id="filterCategories" class="form-select" multiple aria-label="Filtrar por categorías">
+                
+                {% for category in categories %}
+                    <option value="{{ category.IDcategory }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-primary ms-2" onclick="applyFilters()">Filtrar</button>
+        </div>
+        <div class="desplegar-filtro-button">
+            <button class="btn btn-primary ms-2" onclick="desplegarFiltro()">Filtros</button>
+        </div>
+    </div>
+
     <!-- Topbar -->
     <header class="topbar">
-
         <div class="left-section">
             <a href="/inicio">
                 <i class="fa-solid fa-bars" style="color: #fff;"></i>
@@ -63,28 +114,15 @@
             </div>
         </div>
     </header>
+
+
     <!-- Topbar -->
-
-
-
-
     <div class="container mt-4">
         <!-- Barra de acciones -->
         <div class="d-flex justify-content-between mb-3">
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-primary" style="height: min-content;" data-bs-toggle="modal" data-bs-target="#createCategoryModal">Crear Categoría</button>
                 <button class="btn btn-secondary" style="height: min-content;" data-bs-toggle="modal" data-bs-target="#uploadElementModal">Subir Elemento</button>
-            </div>
-            <!-- Filtros -->
-            <div class="d-flex">
-                <input type="text" id="filterName" class="form-control me-2" placeholder="Buscar por nombre">
-                <select id="filterCategories" class="form-select" multiple aria-label="Filtrar por categorías">
-                    
-                    {% for category in categories %}
-                        <option value="{{ category.IDcategory }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-                <button class="btn btn-info ms-2" onclick="applyFilters()">Filtrar</button>
             </div>
         </div>
         {% if filtro %}
@@ -143,15 +181,7 @@
                     <button type="button" class="btn btn-primary" onclick="createCategory()">Crear Categoría</button>
                 </div>
                 <div style="align-self: center;">Categorías</div>
-                <div style="
-                display: inline-grid;
-                gap: 5px;
-                align-content: center;
-                align-items: center;
-                justify-items: center;
-                grid-auto-flow: column;
-                padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap)* .5);
-                ">
+                <div class="categories-container">
                     {% for category in categories %}
                         <form action="{{ url_for('borrar_category', IDcategory=category.IDcategory) }}" method="post" style="display: inline;">
                             <div class="btn btn-secondary" style="padding: 0px 5px 0px 0px;">
@@ -319,6 +349,18 @@
         // Redirigir a la URL con los filtros aplicados
         window.location.href = `/filtrar_elementos?${params.toString()}`;
     }
+
+    function desplegarFiltro() {
+    var filtroInputs = document.querySelector('.filtro-inputs');
+    var desplegarFiltroButton = document.querySelector('.desplegar-filtro-button');
+    
+    if (filtroInputs && desplegarFiltroButton) {
+        filtroInputs.style.display = "flex";
+        desplegarFiltroButton.style.display = "none";
+    } else {
+        console.error('No se encontraron los elementos necesarios para desplegar el filtro');
+    }
+}
     </script>
 </body>
 </html>

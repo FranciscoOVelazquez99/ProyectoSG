@@ -14,7 +14,7 @@
             overflow: hidden;
         }
         .top-bar {
-            background-color: #f8f9fa;
+            background-color: #474747;
             padding: 10px;
             display: flex;
             justify-content: space-between;
@@ -27,7 +27,7 @@
         }
         .sidebar {
             width: 250px;
-            background-color: #f8f9fa;
+            background-color: #474747;
             padding: 15px;
             overflow-y: auto;
         }
@@ -40,7 +40,7 @@
             cursor: pointer;
             padding: 10px;
             margin-bottom: 5px;
-            background-color: #fff;
+            background-color: #cdcdcd;
             border-radius: 5px;
         }
         .note-item:hover {
@@ -55,9 +55,27 @@
             justify-content: space-between;
             margin-top: 10px;
         }
+        .dark-mode-toggle{
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background-color: #474747;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 1.5em;
+        }
+        .dark-mode{
+            background-color: #474747;
+            color: #fff;
+        }
+        input.dark-mode:hover, textarea.dark-mode:hover{
+            background-color: #8f8f8f;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
+    <button class="dark-mode-toggle"><i class="fas fa-moon"></i></button>
     <div class="top-bar">
         <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
         <span style="background-color: #e7b36d; padding: 10px; border-radius: 5px; font-weight: bold;">{{ current_user.username }}</span>
@@ -159,6 +177,12 @@
             });
 
             $('#deleteNoteBtn').click(deleteNote);
+
+            $('.dark-mode-toggle').click(function() {
+                $('.main-content').toggleClass('dark-mode');
+               
+                $('.form-control').toggleClass('dark-mode');
+            });
         });
     </script>
 </body>

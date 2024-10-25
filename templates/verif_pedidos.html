@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Órdenes</title>
+    <link href="{{ url_for('static', filename='inicio_sesion_res/logo.jpg')}}" rel="icon">
     <style>
 
         * {
@@ -93,7 +94,7 @@
             <div class="user-info">
                 <span>{{ current_user.username }}</span>
                 <i class="fa-solid fa-user-tie" style="color: #fff;"></i>
-                <img src="https://via.placeholder.com/40" alt="Avatar" class="user-avatar">
+                <img src="static/img/{{ current_user.useravatar }}" onerror="this.src='static/img/alt-user.webp'" alt="Avatar" class="user-avatar">
             </div>
         </div>
     </header>

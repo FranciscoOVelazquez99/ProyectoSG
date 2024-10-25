@@ -20,13 +20,14 @@ app = Flask(__name__)
 
 
 UPLOAD_FOLDER = 'static/uploads'
+AVATAR_FOLDER = 'static/img'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif','jfif','webp'}
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
+app.config['AVATAR_FOLDER'] = AVATAR_FOLDER
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -406,6 +407,40 @@ def registro():
         return redirect(url_for('registro'))
     return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit)
 
+@app.route('/upload_avatar/<int:user_id>', methods=['POST'])
+@login_required
+@roles_required('ADMIN')
+def upload_avatar(user_id):
+    if 'avatar' not in request.files:
+        return jsonify({'success': False, 'message': 'No se envió ningún archivo'}), 400
+    
+    file = request.files['avatar']
+    
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No se seleccionó ningún archivo'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_extension = os.path.splitext(filename)[1]
+        new_filename = f"avatar_{user_id}{file_extension}"
+        file_path = os.path.join(app.config['AVATAR_FOLDER'], new_filename)
+
+        # Eliminar avatar anterior si existe
+        user = User.query.get(user_id)
+        if user.useravatar:
+            old_avatar_path = os.path.join(app.config['AVATAR_FOLDER'], user.useravatar)
+            if os.path.exists(old_avatar_path):
+                os.remove(old_avatar_path)
+        
+        file.save(file_path)
+        
+        # Actualizar la base de datos con el nuevo nombre de archivo
+        user.useravatar = new_filename
+        db.session.commit()
+        
+        return jsonify({'success': True, 'filename': new_filename})
+    
+    return jsonify({'success': False, 'message': 'Tipo de archivo no permitido'}), 400
 
 @app.route('/editar_usuario/<int:user_id>', methods=['POST'])
 @login_required
@@ -542,7 +577,7 @@ def subir_elemento():
     choose_image = request.form.get('ChooseElementImage')
 
     # Verificar si los campos obligatorios están presentes
-    if not name or not quantity or not categories or (image and choose_image):
+    if not name or not quantity or not categories or (image and choose_image == 0):
         return jsonify({'message': 'Faltan campos obligatorios.'}), 400
 
 
@@ -551,7 +586,7 @@ def subir_elemento():
         return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
 
     # Guardar la imagen de manera segura
-    if choose_image:
+    if choose_image != '0':
         filename = choose_image
     else:
         filename = ramdom_string_img(image.filename)
@@ -706,7 +741,7 @@ def add_location():
             return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
         # Guardar la imagen de manera segura
         filename = secure_filename(image.filename)
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image_path = os.path.join(app.config['UPLOADS_FOLDER'], filename)
         image.save(image_path)
         image_path='static/uploads/'+filename
     else:
@@ -729,7 +764,7 @@ def borrar_location(id):
 
     if location.img:
                     try:
-                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], location.img))
+                        os.remove(os.path.join(app.config['UPLOADS_FOLDER'], location.img))
                     except FileNotFoundError:
                         pass 
     

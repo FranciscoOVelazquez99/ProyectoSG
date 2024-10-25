@@ -6,6 +6,7 @@
     <title>Mis Notas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ url_for('static', filename='inicio_sesion_res/logo.jpg')}}" rel="icon">
     <style>
         body {
             display: flex;
@@ -72,6 +73,11 @@
             background-color: #8f8f8f;
             color: #fff;
         }
+        .user-avatar{
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }   
     </style>
 </head>
 <body>
@@ -79,7 +85,7 @@
     <div class="top-bar">
         <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
         <span style="background-color: #e7b36d; padding: 10px; border-radius: 5px; font-weight: bold;">{{ current_user.username }}</span>
-        <div class="avatar" style="width: 40px; height: 40px; background-color: #ccc; border-radius: 50%;"></div>
+        <img src="static/img/{{ current_user.useravatar }}" onerror="this.src='static/img/alt-user.webp'" alt="Avatar" class="user-avatar">
     </div>
     <div class="content-area">
         <div class="sidebar">

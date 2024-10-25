@@ -4,8 +4,11 @@ Password: admin12345678
 
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.
-- (Planeado) Posibilidad de agregar avatares a los usuarios.
 
+
+#  25/10/2024
+- Corrección de errores en la página de inventario.
+- Posibilidad de agregar avatares a los usuarios.
 
 #  25/10/2024
 - Se añade la funcionalidad de editar elementos en el inventario.

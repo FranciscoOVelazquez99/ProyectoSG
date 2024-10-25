@@ -23,9 +23,12 @@
         /* iconos estilos */
         .grid-container {
             margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            display: flex;
             gap: 20px;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
         }
 
         .grid-item {
@@ -34,6 +37,8 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            line-break: anywhere;
+            height: 100%;
         }
 
         .icon {
@@ -72,10 +77,6 @@
             </a>
         </div>
         <div class="right-section">
-
-            <i class="fas fa-envelope"></i>
-            <span class="notification">5</span>
-
             <div class="user-info">
                 <span>{{ current_user.username }}</span>
                 <i class="fa-solid fa-user-tie" style="color: #fff;"></i>
@@ -90,79 +91,84 @@
     <div class="grid-container">
 
         {% if current_user.userclass=='ADMIN' %}
-        <div class="grid-item">
-            <a href="/registro">
+        <a href="/registro">
+            <div class="grid-item">
+            
                 <div class="icon">
                     <i class="fa-solid fa-user"></i>
                 </div>
                 <p>Usuarios</p>
-            </a>
-        </div>
+            
+            </div>
+        </a>
         {% endif %}
 
         {% if current_user.userclass=='ADMIN' %}
-        <div class="grid-item">
-            <a href="/localizacion">
+        <a href="/localizacion">
+            <div class="grid-item">
                 <div class="icon">
                     <i class="fa-solid fa-map-location-dot"></i>
                 </div>
                 <p>Localizaciones</p>
-            </a>
-        </div>
+            </div>
+        </a>
         {% endif %}
 
-        <div class="grid-item">
-            <a href="/orders">
+        <a href="/orders">
+            <div class="grid-item">
                 <div class="icon">
                     <i class="fa-solid fa-cart-flatbed"></i>
                 </div>
                 <p>Pedidos</p>
-            </a>
-        </div>
+            </div>
+        </a>
 
-        <div class="grid-item">
+        <!-- <div class="grid-item">
             <div class="icon">
                 <i class="fas fa-calendar-alt"></i>
             </div>
             <p>Tareas</p>
-        </div>
+        </div> -->
 
-        <div class="grid-item">
-            <a href="/notas ">
+        <a href="/notas ">
+            <div class="grid-item">
                 <div class="icon">
                     <i class="fas fa-sticky-note"></i>
                 </div>
                 <p>Notas</p>
-            </a>
-        </div>
-
-
-
-
-        <div class="grid-item">
-            <div class="icon">
-                <i class="fas fa-globe"></i>
             </div>
-            <p>Proveedores</p>
-        </div>
+        </a>
 
-        <div class="grid-item">
-            <a href="/mantenimientos">
+
+
+
+        <a href="/proveedores">
+            <div class="grid-item">
+                <div class="icon">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <p>Proveedores</p>
+            </div>
+        </a>
+
+        <a href="/mantenimientos">
+            <div class="grid-item">
                 <div class="icon">
                     <i class="fas fa-tools"></i>
                 </div>
                 <p>Mantenimientos</p>
-            </a>
-        </div>
-        <div class="grid-item">
-            <a href="/inventario">
+            </div>
+        </a>
+
+        <a href="/inventario">
+            <div class="grid-item">
                 <div class="icon">
                     <i class="fas fa-boxes"></i>
                 </div>
                 <p>Inventario</p>
-            </a>
-        </div>
-        <!-- Añadir más elementos según sea necesario -->
+            </div>
+        </a>
+       
     </div>
 </body>
 </html>

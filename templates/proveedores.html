@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proveedores</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .filter-container {
+            display: flex;
+            flex-wrap: nowrap;
+            flex-direction: row;
+            align-items: flex-end;
+        }
+        .tipo-filter {
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary top-bar" style="position: fixed; top: 10px; left: 10px;"><i class="fas fa-arrow-left"></i> Volver</a>
+    <div class="container mt-4">
+        <h2>Proveedores</h2>
+        
+        <!-- Formulario de búsqueda -->
+        <div class="mb-3 filter-container">
+            <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nombre o productos/servicios">
+            <select id="tipoFilter" class="form-select mt-2 tipo-filter">
+                <option value="">Todos los tipos</option>
+                <option value="Productos">Productos</option>
+                <option value="Servicios">Servicios</option>
+                <option value="Materias primas">Materias primas</option>
+            </select>
+            <button onclick="buscarProveedores()" class="btn btn-primary mt-2">Buscar</button>
+        </div>
+    
+        <!-- Botón para abrir el modal de crear proveedor -->
+        <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#crearProveedorModal">
+            Crear Proveedor
+        </button>
+    
+        <!-- Lista de proveedores -->
+        <div id="proveedoresList" class="row">
+            {% for proveedor in proveedores %}
+            <div class="col-md-4 mb-3"">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title" data-id="{{ proveedor.IDproveedor }}" data-nombre="{{ proveedor.nombre }}">{{ proveedor.nombre }}</h5>
+                            {% if proveedor.pagina_web %}
+                            <a data-id="{{ proveedor.IDproveedor }}" data-pagina_web="{{ proveedor.pagina_web }}" href="{{ proveedor.pagina_web }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-globe"></i> Sitio web
+                            </a>
+                            {% endif %}
+                        </div>
+                        <p class="card-text" data-id="{{ proveedor.IDproveedor }}" data-tipo_proveedor="{{ proveedor.tipo_proveedor }}">{{ proveedor.tipo_proveedor }}</p>
+                        <p data-id="{{ proveedor.IDproveedor }}" data-productos_servicios="{{ proveedor.productos_servicios }}"><strong>Productos/Servicios:</strong> {{ proveedor.productos_servicios }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-sm btn-outline-secondary" data-id="{{ proveedor.IDproveedor }}" onclick="toggleDetails({{ proveedor.IDproveedor }})">
+                                Detalles
+                            </button>
+                            <button class="btn btn-sm btn-warning mt-2" onclick="editarProveedor({{ proveedor.IDproveedor }})">Editar</button>
+                            <button class="btn btn-sm btn-danger mt-2" onclick="eliminarProveedor({{ proveedor.IDproveedor }})">Eliminar</button>
+                        </div>
+                        <div id="details-{{ proveedor.IDproveedor }}" style="display: none; margin-top: 10px;">
+                            <p data-id="{{ proveedor.IDproveedor }}" data-identificacion_fiscal="{{ proveedor.identificacion_fiscal }}"><strong>Identificación fiscal:</strong> {{ proveedor.identificacion_fiscal }}</p>
+                            <p data-id="{{ proveedor.IDproveedor }}" data-direccion="{{ proveedor.direccion }}"><strong>Dirección:</strong> {{ proveedor.direccion }}</p>
+                            <p data-id="{{ proveedor.IDproveedor }}" data-telefono="{{ proveedor.telefono }}"><strong>Teléfono:</strong> {{ proveedor.telefono }}</p>
+                            <p data-id="{{ proveedor.IDproveedor }}" data-correo_electronico="{{ proveedor.correo_electronico }}"><strong>Correo:</strong> {{ proveedor.correo_electronico }}</p>
+                            <p data-id="{{ proveedor.IDproveedor }}" data-terminos_garantia="{{ proveedor.terminos_garantia }}"><strong>Términos de Garantía:</strong> {{ proveedor.terminos_garantia }}</p>
+                            <p data-id="{{ proveedor.IDproveedor }}" data-comentarios="{{ proveedor.comentarios }}"><strong>Comentarios:</strong> {{ proveedor.comentarios }}</p>
+                        </div>
+        
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Modal para crear proveedor -->
+    <div class="modal fade" id="crearProveedorModal" tabindex="-1" aria-labelledby="crearProveedorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="crearProveedorModalLabel">Crear Proveedor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="crearProveedorForm" action="{{ url_for('crear_proveedor') }}" method="POST">
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="identificacion_fiscal" class="form-label">Identificación Fiscal</label>
+                            <input type="text" class="form-control" id="identificacion_fiscal" name="identificacion_fiscal" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tipo_proveedor" class="form-label">Tipo de Proveedor</label>
+                            <select class="form-select" id="tipo_proveedor" name="tipo_proveedor" required>
+                                <option value="Productos">Productos</option>
+                                <option value="Servicios">Servicios</option>
+                                <option value="Materias primas">Materias primas</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productos_servicios" class="form-label">Productos/Servicios</label>
+                            <textarea class="form-control" id="productos_servicios" name="productos_servicios"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="terminos_garantia" class="form-label">Términos de Garantía</label>
+                            <textarea class="form-control" id="terminos_garantia" name="terminos_garantia"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="comentarios" class="form-label">Comentarios</label>
+                            <textarea class="form-control" id="comentarios" name="comentarios"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="direccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="direccion" name="direccion">
+                        </div>
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="telefono" name="telefono">
+                        </div>
+                        <div class="mb-3">
+                            <label for="correo_electronico" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="correo_electronico" name="correo_electronico">
+                        </div>
+                        <div class="mb-3">
+                            <label for="pagina_web" class="form-label">Página Web</label>
+                            <input type="url" class="form-control" id="pagina_web" name="pagina_web">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para editar proveedor -->
+    <div class="modal fade" id="editarProveedorModal" tabindex="-1" aria-labelledby="editarProveedorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarProveedorModalLabel">Editar Proveedor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editarProveedorForm" action="/editar_proveedor/<int:id>" method="POST">
+                        <div class="mb-3">
+                            <label for="editar_nombre" class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="editar_nombre" name="editar_nombre" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_identificacion_fiscal" class="form-label">Identificación Fiscal</label>
+                            <input type="text" class="form-control" id="editar_identificacion_fiscal" name="editar_identificacion_fiscal" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_tipo_proveedor" class="form-label">Tipo de Proveedor</label>
+                            <select class="form-select" id="editar_tipo_proveedor" name="editar_tipo_proveedor" required>
+                                <option value="Productos">Productos</option>
+                                <option value="Servicios">Servicios</option>
+                                <option value="Materias primas">Materias primas</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_productos_servicios" class="form-label">Productos/Servicios</label>
+                            <textarea class="form-control" id="editar_productos_servicios" name="editar_productos_servicios"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_terminos_garantia" class="form-label">Términos de Garantía</label>
+                            <textarea class="form-control" id="editar_terminos_garantia" name="editar_terminos_garantia"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_comentarios" class="form-label">Comentarios</label>
+                            <textarea class="form-control" id="editar_comentarios" name="editar_comentarios"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_direccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="editar_direccion" name="editar_direccion">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_telefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="editar_telefono" name="editar_telefono">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_correo_electronico" class="form-label">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="editar_correo_electronico" name="editar_correo_electronico">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editar_pagina_web" class="form-label">Página Web</label>
+                            <input type="url" class="form-control" id="editar_pagina_web" name="editar_pagina_web">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    function toggleDetails(id) {
+        const detailsDiv = document.getElementById(`details-${id}`);
+        if (detailsDiv.style.display === "none") {
+            detailsDiv.style.display = "block";
+        } else {
+            detailsDiv.style.display = "none";
+        }
+    }
+    
+    function editarProveedor(id) {
+        // Hacer una solicitud AJAX para obtener los datos del proveedor
+        fetch(`/get_proveedor/${id}`)
+            .then(response => response.json())
+            .then(proveedor => {
+                // Asignar los valores a los campos del formulario
+                document.getElementById('editar_nombre').value = proveedor.nombre;
+                document.getElementById('editar_identificacion_fiscal').value = proveedor.identificacion_fiscal;
+                document.getElementById('editar_tipo_proveedor').value = proveedor.tipo_proveedor;
+                document.getElementById('editar_productos_servicios').value = proveedor.productos_servicios;
+                document.getElementById('editar_terminos_garantia').value = proveedor.terminos_garantia;
+                document.getElementById('editar_comentarios').value = proveedor.comentarios;
+                document.getElementById('editar_direccion').value = proveedor.direccion;
+                document.getElementById('editar_telefono').value = proveedor.telefono;
+                document.getElementById('editar_correo_electronico').value = proveedor.correo_electronico;
+                document.getElementById('editar_pagina_web').value = proveedor.pagina_web;
+
+                // Configurar la acción del formulario
+                const editForm = document.getElementById('editarProveedorForm');
+                editForm.action = `/editar_proveedor/${id}`;
+
+                // Abrir el modal de edición
+                const editModal = new bootstrap.Modal(document.getElementById('editarProveedorModal'));
+                editModal.show();
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    function eliminarProveedor(id) {
+        if (confirm('¿Estás seguro de que quieres eliminar este proveedor?')) {
+            fetch(`/eliminar_proveedor/${id}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error al eliminar el proveedor');
+                    }
+                });
+        }
+    }
+    
+    function buscarProveedores() {
+        const query = document.getElementById('searchInput').value;
+        const tipo = document.getElementById('tipoFilter').value;
+        
+        fetch(`/buscar_proveedores?query=${query}&tipo=${tipo}`)
+            .then(response => response.json())
+            .then(proveedores => {
+                const proveedoresList = document.getElementById('proveedoresList');
+                proveedoresList.innerHTML = '';
+                
+                proveedores.forEach(proveedor => {
+                    const proveedorCard = `
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title">${proveedor.nombre}</h5>
+                                        ${proveedor.pagina_web ? `
+                                        <a href="${proveedor.pagina_web}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-globe"></i> Sitio web
+                                        </a>
+                                        ` : ''}
+                                    </div>
+                                    <p class="card-text">${proveedor.tipo_proveedor}</p>
+                                    <p><strong>Productos/Servicios:</strong> ${proveedor.productos_servicios}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleDetails(${proveedor.id})">
+                                            Detalles
+                                        </button>
+                                        <button class="btn btn-sm btn-warning mt-2" onclick="editarProveedor(${proveedor.id})">Editar</button>
+                                        <button class="btn btn-sm btn-danger mt-2" onclick="eliminarProveedor(${proveedor.id})">Eliminar</button>
+                                    </div>
+                                    <div id="details-${proveedor.id}" style="display: none;">
+                                        <p><strong>Identificación fiscal:</strong> ${proveedor.identificacion_fiscal}</p>
+                                        <p><strong>Dirección:</strong> ${proveedor.direccion}</p>
+                                        <p><strong>Teléfono:</strong> ${proveedor.telefono}</p>
+                                        <p><strong>Correo:</strong> ${proveedor.correo_electronico}</p>
+                                        <p><strong>Términos de Garantía:</strong> ${proveedor.terminos_garantia}</p>
+                                        <p><strong>Comentarios:</strong> ${proveedor.comentarios}</p>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    proveedoresList.innerHTML += proveedorCard;
+                });
+            });
+    }
+    </script>
+</body>
+</html>

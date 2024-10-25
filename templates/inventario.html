@@ -11,10 +11,61 @@
         .body{
             padding: 20px;
         }
+        .filtro-container{
+        position: absolute;
+        top: 70px;
+        right: 0;
+        z-index: 1000;
+        }
+        .description-container {
+        display: none;
+        position: absolute;
+        background-color: white;
+        border: 1px solid #ddd;
+        padding: 10px;
+        z-index: 1000;
+        max-width: 300px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+        .edit-panel {
+            position: fixed;
+            top: 50%;
+            right: -300px;
+            transform: translateY(-50%);
+            width: 300px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px 0 0 5px;
+            padding: 15px;
+            transition: right 0.3s ease-in-out;
+            z-index: 1001;
+        }
+        .edit-panel.open {
+            right: 0;
+        }
+        .edit-panel-toggle {
+            position: absolute;
+            left: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            border-radius: 5px 0 0 5px;
+        }
         .inventory-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .inventory-grid {
+                justify-content: center;
+            }
         }
         .inventory-item {
             border: 1px solid #ccc;
@@ -24,8 +75,8 @@
             align-items: center;
             justify-items: center;
             justify-content: center;
-            
             border-radius: 10px;
+            width: 250px;
         }
         .inventory-item img {
             max-width: 100%;
@@ -136,23 +187,35 @@
         {% endif %}
         <!-- Grid de elementos -->
         <div class="inventory-grid" id="inventoryGrid">
-            
             {% if elements %}
             {% for element in elements %}
-            {% if element.disp == True %}
-                <div class="inventory-item"  style="background-color: #0d6efd;;" >
-            {% else %}
-                <div class="inventory-item"  style="background-color: rgb(196, 196, 196);" >
-            {% endif %}
+            <div class="inventory-item" style="background-color: {% if element.disp %}#0d6efd{% else %}rgb(196, 196, 196){% endif %};">
+                <div class="inventory-item-id">ID: {{ element.IDelement }}</div>
                 <img src="static/uploads/{{ element.img }}" alt="{{ element.name }}">
                 <div class="inventory-item-name">
                     <p style="margin: 0;">{{ element.name }}</p>
                 </div>
                 <div>
-                    <p>Cantidad: {{ element.cantotal }}</p>
+                    <p>Cantidad total: {{ element.cantotal }}</p>
                     <p>Cantidad disponible: {{ element.candisp }}</p>
                 </div>
-               <div style="align-self: self-end;">
+                <div>
+                    <button class="btn btn-sm {% if element.disp %}btn-success{% else %}btn-danger{% endif %}" 
+                            onclick="cambiarDisponibilidad({{ element.IDelement }})">
+                        {% if element.disp %}Disponible{% else %}No disponible{% endif %}
+                    </button>
+                    {% if element.adds %}
+                    <button class="btn btn-sm btn-info" onclick="toggleDescription({{ element.IDelement }})">
+                        Descripción
+                    </button>
+                    {% endif %}
+                </div>
+                {% if element.adds %}
+                <div class="description-container" id="description-{{ element.IDelement }}">
+                    <p>{{ element.adds }}</p>
+                </div>
+                {% endif %}
+                <div style="align-self: self-end;">
                     <form action="{{ url_for('borrar_elemento', IDelement=element.IDelement) }}" method="post" style="display: inline;">
                         <input class="btn btn-warning btn-sm" style="--bs-btn-line-height: 0.7;" type="submit" value="Eliminar" onclick="return confirm('¿Estás seguro de eliminar este elemento?')">
                     </form>
@@ -164,6 +227,28 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Panel de edición desplegable -->
+    <div class="edit-panel" id="editPanel">
+        <button class="edit-panel-toggle" onclick="toggleEditPanel()">Editar Elemento</button>
+        <h4>Editar Elemento</h4>
+        <form id="editForm" onsubmit="editarElemento(event)">
+            <div class="mb-3">
+                <label for="elementId" class="form-label">ID del Elemento</label>
+                <input type="number" class="form-control" id="elementId" required>
+            </div>
+            <div class="mb-3">
+                <label for="cantotal" class="form-label">Cantidad Total</label>
+                <input type="number" class="form-control" id="cantotal" required>
+            </div>
+            <div class="mb-3">
+                <label for="candisp" class="form-label">Cantidad Disponible</label>
+                <input type="number" class="form-control" id="candisp" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Actualizar</button>
+        </form>
+    </div>
+
 
     <!-- Modal para crear categoria -->
     <div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryLabel" aria-hidden="true">
@@ -333,34 +418,101 @@
     }
 
     function applyFilters() {
-        const filterName = document.getElementById('filterName').value;
-        const filterCategories = Array.from(document.getElementById('filterCategories').selectedOptions)
-            .map(option => option.value);
+            const filterName = document.getElementById('filterName').value;
+            const filterCategories = Array.from(document.getElementById('filterCategories').selectedOptions)
+                .map(option => option.value);
 
-        // Construir la URL con los filtros
-        const params = new URLSearchParams();
-        if (filterName) {
-            params.append('name', filterName);
-        }
-        if (filterCategories.length > 0) {
-            params.append('categories', filterCategories.join(','));  // Unir categorías por comas
+            // Construir la URL con los filtros
+            const params = new URLSearchParams();
+            if (filterName) {
+                params.append('name', filterName);
+            }
+            if (filterCategories.length > 0) {
+                params.append('categories', filterCategories.join(','));  // Unir categorías por comas
+            }
+
+            // Redirigir a la URL con los filtros aplicados
+            window.location.href = `/filtrar_elementos?${params.toString()}`;
         }
 
-        // Redirigir a la URL con los filtros aplicados
-        window.location.href = `/filtrar_elementos?${params.toString()}`;
+        function desplegarFiltro() {
+        var filtroInputs = document.querySelector('.filtro-inputs');
+        var desplegarFiltroButton = document.querySelector('.desplegar-filtro-button');
+        
+        if (filtroInputs && desplegarFiltroButton) {
+            filtroInputs.style.display = "flex";
+            desplegarFiltroButton.style.display = "none";
+        } else {
+            console.error('No se encontraron los elementos necesarios para desplegar el filtro');
+        }
     }
 
-    function desplegarFiltro() {
-    var filtroInputs = document.querySelector('.filtro-inputs');
-    var desplegarFiltroButton = document.querySelector('.desplegar-filtro-button');
-    
-    if (filtroInputs && desplegarFiltroButton) {
-        filtroInputs.style.display = "flex";
-        desplegarFiltroButton.style.display = "none";
-    } else {
-        console.error('No se encontraron los elementos necesarios para desplegar el filtro');
+    function toggleEditPanel() {
+        const panel = document.getElementById('editPanel');
+        panel.classList.toggle('open');
     }
-}
+
+    function editarElemento(event) {
+        event.preventDefault();
+        const elementId = document.getElementById('elementId').value;
+        const cantotal = document.getElementById('cantotal').value;
+        const candisp = document.getElementById('candisp').value;
+
+        fetch(`/editar_elemento/${elementId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `cantotal=${cantotal}&candisp=${candisp}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Elemento actualizado correctamente');
+                location.reload(); // Recargar la página para mostrar los cambios
+            } else {
+                alert('Error al actualizar el elemento');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al actualizar el elemento');
+        });
+    }
+
+
+    function cambiarDisponibilidad(IDelement) {
+            fetch(`/cambiar_disponibilidad/${IDelement}`, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let button = document.querySelector(`button[onclick="cambiarDisponibilidad(${IDelement})"]`);
+                    let item = button.closest('.inventory-item');
+                    if (data.new_state) {
+                        button.textContent = 'Disponible';
+                        button.classList.remove('btn-danger');
+                        button.classList.add('btn-success');
+                        item.style.backgroundColor = '#0d6efd';
+                    } else {
+                        button.textContent = 'No disponible';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-danger');
+                        item.style.backgroundColor = 'rgb(196, 196, 196)';
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    function toggleDescription(elementId) {
+        const descriptionContainer = document.getElementById(`description-${elementId}`);
+        if (descriptionContainer.style.display === 'none' || descriptionContainer.style.display === '') {
+            descriptionContainer.style.display = 'block';
+        } else {
+            descriptionContainer.style.display = 'none';
+        }
+    }
     </script>
 </body>
 </html>

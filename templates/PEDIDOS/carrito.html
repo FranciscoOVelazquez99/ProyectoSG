@@ -17,6 +17,7 @@
             height: 100vh;
             gap: 10px;
         }
+
         .cart-dataform{
             display: flex;
             flex-direction: column;
@@ -73,6 +74,17 @@
 
         .confirm-btn, .back-btn:hover{
             transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            body{
+                width: 85%;
+                margin-left: 30px;
+            }
+            .element-card{
+                columns: 20px 5;
+                font-size: smaller;
+            }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -173,11 +185,10 @@
         document.getElementById('confirm-btn').onclick = async () => {
             if(cartItems.length === 0){
                 alert('Por favor, seleccione al menos un elemento antes de proceder.');
+                return;
             }
 
-            const selectedDays = Array.from(document.querySelectorAll('.repeat-day:checked'))
-                                      .map(day => day.value);  // Obtener los días seleccionados
-
+         
             const orderData = {
                 date: document.getElementById('order-date').value,
                 time: document.getElementById('order-time').value,
@@ -185,6 +196,11 @@
                 items: cartItems
             };
             
+            if(orderData.location === ''){
+                alert('Por favor, seleccione una localización antes de proceder.');
+                return;
+            }
+
             const response = await fetch('/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

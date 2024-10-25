@@ -3,18 +3,17 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, log
 from flask_wtf import FlaskForm
 from functools import wraps
 from wtforms import StringField, PasswordField, SelectField , SubmitField
-from wtforms.validators import InputRequired, Length, DataRequired
+from wtforms.validators import InputRequired, Length
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import extract
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date, DateTime, Text, Time, CheckConstraint
+from sqlalchemy import create_engine, Column,Enum, Integer, String, ForeignKey, Date, DateTime, Text, Time, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker,declarative_base
+from sqlalchemy.orm import sessionmaker,declarative_base
 import os
 import json   
 from sqlalchemy.dialects.mysql import INTEGER
-from datetime import date, timedelta,datetime
+from datetime import timedelta,datetime,date
 
 
 app = Flask(__name__)
@@ -153,13 +152,6 @@ class OrderElement(db.Model):
     element = db.relationship('Element', backref='order_elements')
 
 
-class OrderRep(db.Model):
-    __tablename__ = 'orders_rep'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    IDorder = Column(Integer, ForeignKey('orders.IDorder'))
-    repeat_day = Column(String(255))
-
 class Location(db.Model):
     __tablename__ = 'location'
    
@@ -192,6 +184,21 @@ class Nota(db.Model):
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref='notas')
+
+class Proveedor(db.Model):
+    __tablename__ = 'proveedores'
+   
+    IDproveedor = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(255), nullable=False)
+    identificacion_fiscal = Column(String(255), nullable=True)
+    tipo_proveedor = Column(Enum('Productos', 'Servicios', 'Materias primas', name='tipo_proveedor'), nullable=False)
+    productos_servicios = Column(Text, nullable=True)
+    terminos_garantia = Column(Text, nullable=True)
+    comentarios = Column(Text, nullable=True)
+    direccion = Column(String(255), nullable=True)
+    telefono = Column(String(20), nullable=True)
+    correo_electronico = Column(String(255), nullable=True)
+    pagina_web = Column(String(255), nullable=True)
 
 
 
@@ -281,6 +288,15 @@ def roles_required(*roles):
         return decorated_function
     return decorator
 
+def except_roles(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if current_user.userclass in roles:
+                abort(403)  # Forbidden access
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 def validate_email(email):
     existing_user_email = Email.query.filter_by(
@@ -308,11 +324,6 @@ def ramdom_string_img(filename):
 def home():
     return redirect(url_for('login'))
 
-@app.route("/inicio", methods=['GET', 'POST'])
-@login_required
-def inicio():
-    return render_template('inicio.html')
-
 @app.route("/pedidos", methods=['GET', 'POST'])
 @login_required
 def pedidos():
@@ -328,13 +339,19 @@ def login():
                 if bcrypt.check_password_hash(user.userpass, form.password.data):
                     login_user(user)
                     return redirect(url_for('inicio'))
-            if user.userclass == 'LVL1' or 'LVL2':
+            else:
                 if bcrypt.check_password_hash(user.userpass, form.password.data):
                     login_user(user)
                     return redirect(url_for('pedidos'))
+        flash('Usuario o contraseña incorrectos.', 'danger')
+                
     return render_template('INICIO-SESION/index.html', form=form)
 
-
+@app.route("/inicio", methods=['GET', 'POST'])
+@login_required
+@except_roles('LVL1')
+def inicio():
+    return render_template('inicio.html')
 
 @app.route('/static/')
 def serve_static(path):
@@ -343,7 +360,7 @@ def serve_static(path):
   )
 ############################ //////// ###################################################
 
-############################ Loginout ###################################################
+############################ Logout ###################################################
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -400,22 +417,25 @@ def editar_usuario(user_id):
         user.username = formedit.username.data
         if formedit.password.data:
             user.userpass = bcrypt.generate_password_hash(formedit.password.data)
+            flash('Contraseña editada exitosamente!', 'success')
         if formedit.rol.data != 'Seleccione un rol':
             user.userclass = formedit.rol.data
             db.session.commit()
-        flash('Usuario editado exitosamente!', 'success')
-
+            flash('Rol editado exitosamente!', 'success')
         if formedit.email.data:
             # Verificar si el usuario ya tiene un email asociado
             existing_email = Email.query.filter_by(IDuser=user.IDuser).first()
             if existing_email:
                 # Si existe, actualizar la dirección de correo
                 existing_email.address = formedit.email.data
+                flash('Email editado exitosamente!', 'success')
             else:
                 # Si no existe, crear un nuevo registro de email
                 new_email = Email(IDuser=user.IDuser, address=formedit.email.data)
                 db.session.add(new_email)
+                flash('Email agregado exitosamente!', 'success')
             db.session.commit()
+        
         return redirect(url_for('registro'))
     return redirect(url_for('registro'))
 
@@ -427,12 +447,19 @@ def editar_usuario(user_id):
 def borrar_usuario(user_id):
     user = User.query.get_or_404(user_id)
     
+    # Primero, borramos los correos electrónicos asociados al usuario
+    Email.query.filter_by(IDuser=user_id).delete()
+    
+    # Luego, borramos al usuario
     db.session.delete(user)
-    mail = Email.query.get(user_id)
-    if mail:
-        db.session.delete(mail)
-    db.session.commit()
-    flash('Usuario eliminado exitosamente!', 'success')
+    
+    try:
+        db.session.commit()
+        flash('Usuario eliminado exitosamente!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el usuario: {str(e)}', 'error')
+    
     return redirect(url_for('registro'))
 
 ########### /////////// #########
@@ -445,6 +472,8 @@ def borrar_usuario(user_id):
 
 ########### inventario #########
 @app.route('/inventario')
+@login_required
+@except_roles('LVL1')
 def inventario():
     # Consultar categorías y elementos desde la base de datos
     categories = Category.query.all()
@@ -456,6 +485,8 @@ def inventario():
 
 
 @app.route('/crear_categoria', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def crear_categoria():
     # Obtener datos enviados por Fetch API (en formato JSON)
     data = request.get_json()
@@ -479,6 +510,8 @@ def crear_categoria():
 
 
 @app.route('/borrar_category/<int:IDcategory>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def borrar_category(IDcategory):
 
     try:
@@ -497,6 +530,8 @@ def borrar_category(IDcategory):
 
 
 @app.route('/subir_elemento', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def subir_elemento():
     # Obtener datos del FormData
     name = request.form.get('name')
@@ -544,6 +579,8 @@ def subir_elemento():
 
 
 @app.route('/borrar_elemento/<int:IDelement>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def borrar_elemento(IDelement):
  
     element = Element.query.get_or_404(IDelement)
@@ -564,8 +601,40 @@ def borrar_elemento(IDelement):
     flash('Elemento eliminado', 'success')
     return redirect(url_for('inventario'))
 
+@app.route('/editar_elemento/<int:IDelement>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
+def editar_elemento(IDelement):
+    element = Element.query.get_or_404(IDelement)
+    
+    cantotal = request.form.get('cantotal', type=int)
+    candisp = request.form.get('candisp', type=int)
+    
+    if cantotal is not None:
+        element.cantotal = cantotal
+    if candisp is not None:
+        element.candisp = candisp
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Elemento actualizado correctamente'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+@app.route('/cambiar_disponibilidad/<int:IDelement>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
+def cambiar_disponibilidad(IDelement):
+    element = Element.query.get_or_404(IDelement)
+    element.disp = not element.disp
+    db.session.commit()
+    return jsonify({'success': True, 'new_state': element.disp})
+
 
 @app.route('/filtrar_elementos', methods=['GET'])
+@login_required
+@except_roles('LVL1')
 def filtrar_elementos():
     # Obtener los filtros de la URL
     name_filter = request.args.get('name', '').strip()
@@ -605,6 +674,8 @@ def filtrar_elementos():
 
 ########### Localizaciones #########
 @app.route('/localizacion')
+@login_required
+@except_roles('LVL1')
 def localizacion():
     ## Obtener todas las localizaciones cargadas
     locations = Location.query.all()
@@ -616,6 +687,8 @@ def localizacion():
 ########### /////////// #########
 
 @app.route('/add_location', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def add_location():
     # Obtener datos del FormData
     name = request.form.get('name')
@@ -649,6 +722,8 @@ def add_location():
     return jsonify({'message': 'Localizacion cargada.'}), 200
 
 @app.route('/borrar_location/<int:id>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def borrar_location(id):
     location = Location.query.get_or_404(id)
 
@@ -666,9 +741,10 @@ def borrar_location(id):
 
 
 
-############################ Locura maximaaaa ###################################################
+############################ CARRITO Y PEDIDOS ###################################################
 
 @app.route('/elements', methods=['GET'])
+@login_required  
 def get_elements():
     categories = request.args.getlist('categories[]')  # Filtros de categorías seleccionados
     query = db.session.query(Element)  # Empezamos la consulta con los elementos
@@ -685,6 +761,7 @@ def get_elements():
     return jsonify(elements_data)
 
 @app.route('/categories', methods=['GET'])
+@login_required
 def get_categories():
     categories = Category.query.all()
     categories_data = [{'IDcategory': c.IDcategory, 'name': c.name} for c in categories]
@@ -692,6 +769,7 @@ def get_categories():
 
 
 @app.route('/locations', methods=['GET'])
+@login_required
 def get_locations():
     locations = Location.query.all()
     locations_data = [{'id': loc.id, 'name': loc.name} for loc in locations]
@@ -702,6 +780,7 @@ def get_locations():
 
 
 @app.route('/checkout', methods=['GET', 'POST'])
+@login_required
 def checkout():
     if request.method == 'GET':
         # Renderizar la página de checkout con la lista de elementos seleccionados
@@ -742,6 +821,8 @@ def checkout():
 ############################ orders ###################################################
 
 @app.route('/orders', methods=['GET'])
+@login_required
+@except_roles('LVL1')
 def show_orders():
     orders = Order.query.join(Location, Location.id == Order.location) \
                         .join(OrderElement, Order.IDorder == OrderElement.IDorder) \
@@ -757,6 +838,8 @@ def show_orders():
 
 
 @app.route('/update_order', methods=['POST'])
+@login_required
+@except_roles('LVL1')
 def update_order():
     data = request.form  # Recibir datos del formulario enviado con POST
     
@@ -815,12 +898,14 @@ def update_order():
 
 @app.route('/notas')
 @login_required
+@except_roles('LVL1')
 def notas():
     notas_usuario = Nota.query.filter_by(IDuser=current_user.IDuser).order_by(Nota.fecha_creacion.desc()).all()
     return render_template('notas.html', notas=notas_usuario)
 
 @app.route('/get_nota/<int:id_nota>')
 @login_required
+@except_roles('LVL1')
 def get_nota(id_nota):
     nota = Nota.query.get_or_404(id_nota)
     if nota.IDuser != current_user.IDuser:
@@ -832,6 +917,7 @@ def get_nota(id_nota):
 
 @app.route('/crear_nota', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def crear_nota():
     titulo = request.form.get('titulo')
     contenido = request.form.get('contenido')
@@ -842,6 +928,7 @@ def crear_nota():
 
 @app.route('/editar_nota/<int:id_nota>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def editar_nota(id_nota):
     nota = Nota.query.get_or_404(id_nota)
     if nota.IDuser != current_user.IDuser:
@@ -853,6 +940,7 @@ def editar_nota(id_nota):
 
 @app.route('/borrar_nota/<int:id_nota>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def borrar_nota(id_nota):
     nota = Nota.query.get_or_404(id_nota)
     if nota.IDuser != current_user.IDuser:
@@ -868,12 +956,14 @@ def borrar_nota(id_nota):
 
 @app.route('/mantenimientos')
 @login_required
+@except_roles('LVL1')
 def mantenimientos():
     maintenances = Maintenance.query.all()
     return render_template('mantenimientos.html', maintenances=maintenances)
 
 @app.route('/crear_mantenimiento', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def crear_mantenimiento():
     data = request.json
     if not data:
@@ -903,6 +993,7 @@ def crear_mantenimiento():
 
 @app.route('/editar_mantenimiento/<int:id>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def editar_mantenimiento(id):
     maintenance = Maintenance.query.get_or_404(id)
     data = request.json
@@ -917,6 +1008,7 @@ def editar_mantenimiento(id):
 
 @app.route('/eliminar_mantenimiento/<int:id>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def eliminar_mantenimiento(id):
     maintenance = Maintenance.query.get_or_404(id)
     db.session.delete(maintenance)
@@ -925,6 +1017,7 @@ def eliminar_mantenimiento(id):
 
 @app.route('/get_mantenimiento/<int:id>')
 @login_required
+@except_roles('LVL1')
 def get_mantenimiento(id):
     maintenance = Maintenance.query.get_or_404(id)
     return jsonify({
@@ -939,6 +1032,7 @@ def get_mantenimiento(id):
 
 @app.route('/elementos/<int:id_maintenance>')
 @login_required
+@except_roles('LVL1')
 def elementos(id_maintenance):
     maintenance = Maintenance.query.get_or_404(id_maintenance)
     maintenance_elements = MaintenanceElement.query.filter_by(IDmaintenance=id_maintenance).all()
@@ -947,6 +1041,7 @@ def elementos(id_maintenance):
 
 @app.route('/asignar_elemento/<int:id_maintenance>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def asignar_elemento(id_maintenance):
     if request.is_json:
         data = request.json
@@ -975,6 +1070,7 @@ def asignar_elemento(id_maintenance):
 
 @app.route('/actualizar_revision/<int:id>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def actualizar_revision(id):
     maintenance_element = MaintenanceElement.query.get_or_404(id)
     maintenance_element.revised = request.json['revised']
@@ -983,6 +1079,7 @@ def actualizar_revision(id):
 
 @app.route('/actualizar_detalles/<int:id>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def actualizar_detalles(id):
     maintenance_element = MaintenanceElement.query.get_or_404(id)
     maintenance_element.details = request.json['details']
@@ -991,6 +1088,7 @@ def actualizar_detalles(id):
 
 @app.route('/eliminar_elemento_mantenimiento/<int:id>', methods=['POST'])
 @login_required
+@except_roles('LVL1')
 def eliminar_elemento_mantenimiento(id):
     maintenance_element = MaintenanceElement.query.get_or_404(id)
     db.session.delete(maintenance_element)
@@ -1000,6 +1098,115 @@ def eliminar_elemento_mantenimiento(id):
 
 ############### /////////// ###############
 
+############################ proveedores ###################################################
+
+@app.route('/proveedores', methods=['GET'])
+@login_required
+@except_roles('LVL1')
+def proveedores():
+    proveedores = Proveedor.query.all()
+    return render_template('proveedores.html', proveedores=proveedores)
+
+@app.route('/crear_proveedor', methods=['POST'])
+@login_required
+@except_roles('LVL1')
+def crear_proveedor():
+    data = request.form
+    nuevo_proveedor = Proveedor(
+        nombre=data['nombre'],
+        identificacion_fiscal=data['identificacion_fiscal'],
+        tipo_proveedor=data['tipo_proveedor'],
+        productos_servicios=data['productos_servicios'],
+        terminos_garantia=data['terminos_garantia'],
+        comentarios=data['comentarios'],
+        direccion=data['direccion'],
+        telefono=data['telefono'],
+        correo_electronico=data['correo_electronico'],
+        pagina_web=data['pagina_web']
+    )
+    db.session.add(nuevo_proveedor)
+    db.session.commit()
+    return redirect(url_for('proveedores'))
+
+@app.route('/get_proveedor/<int:id>')
+@login_required
+@except_roles('LVL1')
+def get_proveedor(id):
+    proveedor = Proveedor.query.get_or_404(id)
+    return jsonify({
+        'nombre': proveedor.nombre,
+        'identificacion_fiscal': proveedor.identificacion_fiscal,
+        'tipo_proveedor': proveedor.tipo_proveedor,
+        'productos_servicios': proveedor.productos_servicios,
+        'terminos_garantia': proveedor.terminos_garantia,
+        'comentarios': proveedor.comentarios,
+        'direccion': proveedor.direccion,
+        'telefono': proveedor.telefono,
+        'correo_electronico': proveedor.correo_electronico,
+        'pagina_web': proveedor.pagina_web
+    })
+
+@app.route('/editar_proveedor/<int:id>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
+def editar_proveedor(id):
+    proveedor = Proveedor.query.get_or_404(id)
+    proveedor.nombre = request.form['editar_nombre']
+    proveedor.identificacion_fiscal = request.form['editar_identificacion_fiscal']
+    proveedor.tipo_proveedor = request.form['editar_tipo_proveedor']
+    proveedor.productos_servicios = request.form['editar_productos_servicios']
+    proveedor.terminos_garantia = request.form['editar_terminos_garantia']
+    proveedor.comentarios = request.form['editar_comentarios']
+    proveedor.direccion = request.form['editar_direccion']
+    proveedor.telefono = request.form['editar_telefono']
+    proveedor.correo_electronico = request.form['editar_correo_electronico']
+    proveedor.pagina_web = request.form['editar_pagina_web']
+    db.session.commit()
+    return redirect(url_for('proveedores'))
+
+@app.route('/eliminar_proveedor/<int:id>', methods=['POST'])
+@login_required
+@except_roles('LVL1')
+def eliminar_proveedor(id):
+    proveedor = Proveedor.query.get_or_404(id)
+    db.session.delete(proveedor)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/buscar_proveedores', methods=['GET'])
+@login_required
+@except_roles('LVL1')
+def buscar_proveedores():
+    query = request.args.get('query', '')
+    tipo = request.args.get('tipo', '')
+    
+    proveedores = Proveedor.query
+    
+    if query:
+        proveedores = proveedores.filter(
+            (Proveedor.nombre.ilike(f'%{query}%')) |
+            (Proveedor.productos_servicios.ilike(f'%{query}%'))
+        )
+    
+    if tipo:
+        proveedores = proveedores.filter(Proveedor.tipo_proveedor == tipo)
+    
+    proveedores = proveedores.all()
+    return jsonify([{
+        'id': p.IDproveedor,
+        'nombre': p.nombre,
+        'tipo_proveedor': p.tipo_proveedor,
+        'productos_servicios': p.productos_servicios,
+        'pagina_web': p.pagina_web,
+        'identificacion_fiscal': p.identificacion_fiscal,
+        'direccion': p.direccion,
+        'telefono': p.telefono,
+        'correo_electronico': p.correo_electronico,
+        'terminos_garantia': p.terminos_garantia,
+        'comentarios': p.comentarios
+    } for p in proveedores])
+
+############### /////////// ###############
 
 
 

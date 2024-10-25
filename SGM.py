@@ -32,7 +32,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://user:password@db/dbname'
 app.config['SECRET_KEY'] = 'eQ9xv;ZyR#M@H8@'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -1248,8 +1248,5 @@ def buscar_proveedores():
 ############################ ////////////// ###################################################
 
 
-from waitress import serve
-
 if __name__ == "__main__":
-    # Iniciar el servidor usando Waitress
-    serve(app, host='0.0.0.0', port=5010)
+    app.run()

@@ -772,7 +772,7 @@ def add_location():
             return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
         # Guardar la imagen de manera segura
         filename = secure_filename(image.filename)
-        image_path = os.path.join(app.config['UPLOADS_FOLDER'], filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image.save(image_path)
         image_path='static/uploads/'+filename
     else:
@@ -795,7 +795,7 @@ def borrar_location(id):
 
     if location.img:
                     try:
-                        os.remove(os.path.join(app.config['UPLOADS_FOLDER'], location.img))
+                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], location.img))
                     except FileNotFoundError:
                         pass 
     

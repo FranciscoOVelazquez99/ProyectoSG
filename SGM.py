@@ -1287,10 +1287,3 @@ def buscar_proveedores():
 
 
 ############################ ////////////// ###################################################
-
-
-from waitress import serve
-
-if __name__ == "__main__":
-    # Iniciar el servidor usando Waitress
-    serve(app, host='0.0.0.0', port=5010)

@@ -1,10 +1,13 @@
 User: admin
 Password: admin12345678
 
+# Windows Branch
 
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.
 
+# 26/10/2024
+- Corrección de errores.
 
 #  25/10/2024
 - Corrección de errores en la página de inventario.

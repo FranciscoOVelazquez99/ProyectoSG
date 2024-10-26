@@ -104,6 +104,7 @@
                     url: `/actualizar_revision/${id}`,
                     method: 'POST',
                     contentType: 'application/json',
+                    
                     data: JSON.stringify({revised: revised}),
                     success: function(response) {
                         console.log('Revisión actualizada');

@@ -7,14 +7,17 @@ from wtforms.validators import InputRequired, Length
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine, Column,Enum, Integer, String, ForeignKey, Date, DateTime, Text, Time, CheckConstraint
+from sqlalchemy import create_engine, Column,Enum,text, Integer, String, ForeignKey, Date, DateTime, Text, Time, CheckConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker,declarative_base
 import os
 import json   
 from sqlalchemy.dialects.mysql import INTEGER
 from datetime import timedelta,datetime,date
-
+import time
+from sqlalchemy.exc import OperationalError
+import socket
+from flask import flash
 
 app = Flask(__name__)
 
@@ -41,7 +44,8 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 
-
+# Crear una base de datos SQLite
+engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Crear una instancia base para las clases de las tablas
 Base = declarative_base()
@@ -51,7 +55,7 @@ class User(db.Model, UserMixin):
    
     IDuser = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(255), nullable=False, unique=True)
-    userpass = Column(String(255), nullable=False)
+    userpass = Column(String, nullable=False)
     userclass = Column(String(255), nullable=False)
     useravatar = Column(String(255), nullable=True)
     def get_id(self):
@@ -117,8 +121,8 @@ class MaintenanceElement(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True)
     IDmaintenance = Column(Integer, ForeignKey('maintenance.IDmaintenance'))
     IDelement = Column(Integer, ForeignKey('elements.IDelement'))
-    revised = Column(Integer, nullable=True)
-    details = Column(String(255), nullable=True)
+    revised = db.Column(db.Boolean, nullable=True, default=False)
+    details = Column(String(255), nullable=True, default='')
 
     # Agregar esta línea para establecer la relación con Element
     element = db.relationship('Element', backref='maintenance_elements')
@@ -163,18 +167,6 @@ class Location(db.Model):
     img = Column(String(255), nullable=True)
 
 
-class Task(db.Model):
-    __tablename__ = 'tareas'
-   
-    IDtarea = Column(Integer, primary_key=True, autoincrement=True)
-    IDorder = Column(Integer, ForeignKey('orders.IDorder'), nullable=True)
-    titulo = Column(String(255), nullable=False)
-    cuerpo = Column(String(255), nullable=True)
-    fecha_in = Column(Date, nullable=True)
-    fecha_fin = Column(Date, nullable=False)
-    prioridad = Column(String(255), nullable=True)
-    estado = Column(String(255), nullable=True)
-
 class Nota(db.Model):
     __tablename__ = 'notas'
    
@@ -202,19 +194,6 @@ class Proveedor(db.Model):
     pagina_web = Column(String(255), nullable=True)
 
 
-
-with app.app_context():
-    # Now you can perform operations like creating tables
-    db.create_all() 
-
-# Crear una base de datos SQLite
-engine = create_engine('sqlite:///database.db')
-
-
-# Crear una sesión
-Session = sessionmaker(bind=engine)
-session = Session()
-
 ######## formulario de registro ##########
 
 class RegisterForm(FlaskForm):
@@ -235,7 +214,7 @@ class RegisterForm(FlaskForm):
 
 class EditForm(FlaskForm):
     username = StringField(validators=[
-                           InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Usuario"})
+                           Length(min=4, max=20)], render_kw={"placeholder": "Usuario"})
     email = StringField(validators=[
                             Length(max=45)], render_kw={"placeholder": "Email"})
     
@@ -260,14 +239,49 @@ class LoginForm(FlaskForm):
 
 ###
 
+# Crear una sesión
+Session = sessionmaker(bind=engine)
+session = Session()
+
+
 def create_admin():
     with app.app_context(): 
         if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', userpass=bcrypt.generate_password_hash('admin12345678'),userclass='ADMIN')
+            hashed_password = bcrypt.generate_password_hash('admin12345678').decode('utf-8')
+            admin = User(username='admin', userpass=hashed_password, userclass='ADMIN')
             db.session.add(admin)
             db.session.commit()
 
-create_admin()
+def try_connect(max_retries=5, delay=5):
+    retries = 0
+    while retries < max_retries:
+        try:
+            # Intenta hacer una consulta simple para verificar la conexión
+            with app.app_context():
+                db.session.execute(text('SELECT 1'))
+            print("Conexión exitosa a la base de datos.")
+            return True
+        except OperationalError as e:
+            print(f"No se pudo conectar a la base de datos. Intento {retries + 1} de {max_retries}.")
+            print(f"Error: {e}")
+            retries += 1
+            time.sleep(delay)
+    
+    print("No se pudo establecer conexión con la base de datos después de varios intentos.")
+    return False
+
+def initialize_database():
+    with app.app_context():
+        db.create_all()
+        create_admin()
+
+# Intenta conectar a la base de datos
+if try_connect():
+    # Si la conexión es exitosa, inicializa la base de datos
+    initialize_database()
+else:
+    print("La aplicación no pudo iniciar debido a problemas de conexión con la base de datos.")
+    exit(1)
 
 @login_manager.user_loader
 def load_user(IDuser):
@@ -336,16 +350,13 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            if user.userclass != 'LVL1':
-                if bcrypt.check_password_hash(user.userpass, form.password.data):
-                    login_user(user)
+            if bcrypt.check_password_hash(user.userpass, form.password.data):
+                login_user(user)
+                if user.userclass != 'LVL1':
                     return redirect(url_for('inicio'))
-            else:
-                if bcrypt.check_password_hash(user.userpass, form.password.data):
-                    login_user(user)
+                else:
                     return redirect(url_for('pedidos'))
         flash('Usuario o contraseña incorrectos.', 'danger')
-                
     return render_template('INICIO-SESION/index.html', form=form)
 
 @app.route("/inicio", methods=['GET', 'POST'])
@@ -391,7 +402,7 @@ def registro():
         if validate_username(form.username):
             flash('El usuario ya existe.', 'warning')
             return redirect(url_for('registro'))  
-        hashed_password = bcrypt.generate_password_hash(form.password.data)
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         new_user = User(username=form.username.data, userpass=hashed_password,userclass=form.rol.data)
         db.session.add(new_user)
         if form.email.data:
@@ -405,7 +416,7 @@ def registro():
         db.session.commit()
         flash('Usuario creado.', 'success')
         return redirect(url_for('registro'))
-    return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit)
+    return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit,date=datetime.now().strftime('%d/%m/%Y %H:%M:%S'))
 
 @app.route('/upload_avatar/<int:user_id>', methods=['POST'])
 @login_required
@@ -446,33 +457,53 @@ def upload_avatar(user_id):
 @login_required
 @roles_required('ADMIN')
 def editar_usuario(user_id):
-    formedit = EditForm()
+    data = request.get_json()
     user = User.query.get_or_404(user_id)
-    if formedit:
-        user.username = formedit.username.data
-        if formedit.password.data:
-            user.userpass = bcrypt.generate_password_hash(formedit.password.data)
-            flash('Contraseña editada exitosamente!', 'success')
-        if formedit.rol.data != 'Seleccione un rol':
-            user.userclass = formedit.rol.data
-            db.session.commit()
-            flash('Rol editado exitosamente!', 'success')
-        if formedit.email.data:
-            # Verificar si el usuario ya tiene un email asociado
+    
+    if data:
+        changes_made = False
+        
+        if data['username'] and data['username'] != user.username:
+            user.username = data['username']
+            changes_made = True
+            flash(f"Nombre de usuario cambiado a: {user.username}", 'success')
+    
+        if data['password']:
+            user.userpass = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+            changes_made = True
+            flash("Contraseña cambiada", 'success')
+        if data['rol'] != 'Seleccione un rol' and data['rol'] != user.userclass:
+            user.userclass = data['rol']
+            changes_made = True
+            flash(f"Rol cambiado a: {user.userclass}", 'success')
+        if data['email']:
             existing_email = Email.query.filter_by(IDuser=user.IDuser).first()
             if existing_email:
-                # Si existe, actualizar la dirección de correo
-                existing_email.address = formedit.email.data
-                flash('Email editado exitosamente!', 'success')
+                if existing_email.address != data['email']:
+                    existing_email.address = data['email']
+                    changes_made = True
+                    flash(f"Email actualizado a: {existing_email.address}", 'success')
             else:
-                # Si no existe, crear un nuevo registro de email
-                new_email = Email(IDuser=user.IDuser, address=formedit.email.data)
+                new_email = Email(IDuser=user.IDuser, address=data['email'])
                 db.session.add(new_email)
-                flash('Email agregado exitosamente!', 'success')
-            db.session.commit()
-        
-        return redirect(url_for('registro'))
-    return redirect(url_for('registro'))
+                changes_made = True
+                flash(f"Email añadido: {new_email.address}", 'success')
+        if changes_made:
+            try:
+                db.session.commit()
+                flash('Usuario actualizado exitosamente!', 'success')
+                return jsonify({'success': True}), 200
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error al actualizar el usuario: {str(e)}', 'danger')
+                return jsonify({'success': False, 'message': f'Error al actualizar el usuario: {str(e)}'}), 400
+        else:
+            flash('No se realizaron cambios en el usuario.', 'info')
+            return jsonify({'success': False, 'message': 'No se realizaron cambios en el usuario.'}), 400
+    else:
+        flash('No se enviaron datos para actualizar', 'danger')
+        return jsonify({'success': False, 'message': 'No se enviaron datos para actualizar'}), 400
+    
 
 
 # Ruta para eliminar un usuario existente
@@ -741,7 +772,7 @@ def add_location():
             return jsonify({'message': 'Tipo de archivo no permitido.'}), 400
         # Guardar la imagen de manera segura
         filename = secure_filename(image.filename)
-        image_path = os.path.join(app.config['UPLOADS_FOLDER'], filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image.save(image_path)
         image_path='static/uploads/'+filename
     else:
@@ -764,7 +795,7 @@ def borrar_location(id):
 
     if location.img:
                     try:
-                        os.remove(os.path.join(app.config['UPLOADS_FOLDER'], location.img))
+                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], location.img))
                     except FileNotFoundError:
                         pass 
     
@@ -1046,9 +1077,19 @@ def editar_mantenimiento(id):
 @except_roles('LVL1')
 def eliminar_mantenimiento(id):
     maintenance = Maintenance.query.get_or_404(id)
+    
+    # Eliminar elementos asociados
+    MaintenanceElement.query.filter_by(IDmaintenance=id).delete()
+    
+    # Eliminar el mantenimiento
     db.session.delete(maintenance)
-    db.session.commit()
-    return jsonify({'success': True})
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Mantenimiento y elementos asociados eliminados correctamente'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error al eliminar: {str(e)}'}), 500
 
 @app.route('/get_mantenimiento/<int:id>')
 @login_required
@@ -1074,35 +1115,35 @@ def elementos(id_maintenance):
     available_elements = Element.query.all()
     return render_template('elementos.html', maintenance=maintenance, maintenance_elements=maintenance_elements, available_elements=available_elements)
 
-@app.route('/asignar_elemento/<int:id_maintenance>', methods=['POST'])
+@app.route('/asignar_elemento/<int:maintenance_id>', methods=['POST'])
 @login_required
-@except_roles('LVL1')
-def asignar_elemento(id_maintenance):
-    if request.is_json:
-        data = request.json
-    else:
-        data = request.form
-
+def asignar_elemento(maintenance_id):
+    data = request.json
     element_id = data.get('element_id')
     
     if not element_id:
-        return jsonify({'error': 'No se proporcionó un ID de elemento válido'}), 400
-
-    new_maintenance_element = MaintenanceElement(
-        IDmaintenance=id_maintenance,
-        IDelement=element_id,
-        revised=False,
-        details=''
-    )
-    db.session.add(new_maintenance_element)
+        return jsonify({'success': False, 'message': 'No se proporcionó ID de elemento'}), 400
     
     try:
+        maintenance = Maintenance.query.get(maintenance_id)
+        element = Element.query.get(element_id)
+        
+        if not maintenance or not element:
+            return jsonify({'success': False, 'message': 'Mantenimiento o elemento no encontrado'}), 404
+        
+        new_maintenance_element = MaintenanceElement(
+            IDmaintenance=maintenance_id,
+            IDelement=element_id,
+        )
+        db.session.add(new_maintenance_element)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Elemento asignado correctamente'}), 200
+        
+        return jsonify({'success': True, 'message': 'Elemento asignado correctamente'})
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Error al asignar el elemento: {str(e)}'}), 500
-
+        print(f"Error al asignar elemento: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error al asignar elemento'}), 500
+       
 @app.route('/actualizar_revision/<int:id>', methods=['POST'])
 @login_required
 @except_roles('LVL1')

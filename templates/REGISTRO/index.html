@@ -13,6 +13,25 @@
     
     <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary top-bar" style="position: fixed; top: 10px; left: 10px;"><i class="fas fa-arrow-left"></i> Volver</a>
     
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="toast-container position-static">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-header">
+            <img src="..." class="rounded me-2" alt="...">
+            <strong class="me-auto">Registro</strong>
+            <small class="text-body-secondary">{{ date }}</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            {{ message }}
+          </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+
     <div class="login-container">
         <div class="logo">
             <img src="static/registro_res/logo.jpg" alt="Logo">
@@ -65,35 +84,39 @@
                     </form>
                 </div>
                 <div style="writing-mode: vertical-rl;">
-                    <button style="height: 100%;" class="btn btn-primary btn-sm" style="--bs-btn-line-height: 0.7;" type="button" data-bs-toggle="modal" data-bs-target="#exampleModal{{user.IDuser}}">Editar</button>
+                    <button style="height: 100%;" class="btn btn-primary btn-sm" style="--bs-btn-line-height: 0.7;" type="button" data-bs-toggle="modal" data-bs-target="#editUserModal" onclick="setUser({{ user.IDuser }}, '{{ user.username }}')">Editar</button>
                 </div>
             </div>
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
         <!-- Modal -->
-        <div class="modal fade" id="exampleModal{{user.IDuser}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content" style="background-color: #1c1c1c;">
                     <div class="modal-header">
                         <h1 class="modal-title fs-5" id="exampleModalLabel">Editar usuario</h1>
                     </div>
                     <div class="modal-body">
-                        <form action="{{ url_for('editar_usuario', user_id=user.IDuser) }}" method="POST">
-                            {{ formedit.hidden_tag() }}
-                            <label for='username{{user.IDuser}}'>Usuario</label>
-                            {{ formedit.username(class="form-control", id="username" ~ user.IDuser, value=user.username) }}
+                        <p id="textusername">
 
-                            <label for='email{{user.IDuser}}'>Email</label>
-                            {{ formedit.email(class="form-control", value=user.email.address, id='email' ~ user.IDuser) }}
-
-                            <label for='password{{user.IDuser}}'>Contraseña</label>
-                            {{ formedit.password(class="form-control", id='password' ~ user.IDuser) }}
-
-                            <label for='rol{{user.IDuser}}'>Rol</label>
-                            {{ formedit.rol(class="form-select", id='rol' ~ user.IDuser) }}
-
-                            {{ formedit.submit(class="btn btn-primary", id='submit' ~ user.IDuser) }}
-
+                        </p>
+                        <form method="POST" onsubmit="return editUser()">
+                            <label for='username'>Usuario</label>
+                            {{ formedit.username(class="form-control", id="editusername", placeholder="Nuevo nombre de usuario") }}
+                        
+                            <label for='email'>Email</label>
+                            {{ formedit.email(class="form-control", id='editemail', placeholder="Nuevo email") }}
+                        
+                            <label for='password'>Contraseña</label>
+                            {{ formedit.password(class="form-control", id='editpassword', placeholder="Nueva contraseña") }}
+                        
+                            <label for='rol'>Rol</label>
+                            {{ formedit.rol(class="form-select", id='editrol') }}
+                        
+                            <button type="submit" class="btn btn-primary" id="editbutton" data-id="">Editar</button>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -102,14 +125,47 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    function uploadAvatar(userId, input) {
-        if (input.files && input.files[0]) {
+    function setUser(userId, username) {
+        document.getElementById('textusername').innerText = username;
+        document.getElementById('editbutton').setAttribute('data-id', userId);
+    }
+
+    function editUser() {
+        var userId = document.getElementById('editbutton').getAttribute('data-id');
+        var username = document.getElementById('editusername').value;
+        var email = document.getElementById('editemail').value;
+        var password = document.getElementById('editpassword').value;
+        var rol = document.getElementById('editrol').value;
+
+        fetch(`/editar_usuario/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({username: username, email: email, password: password, rol: rol})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Usuario actualizado con éxito');
+                location.reload();
+            } else {
+                alert('Error al actualizar el usuario: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al actualizar el usuario');
+        });
+
+        return false; // Prevenir el envío del formulario
+    }
+
+        function uploadAvatar(userId, input) {
+            if (input.files && input.files[0]) {
             var formData = new FormData();
             formData.append('avatar', input.files[0]);
 

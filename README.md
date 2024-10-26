@@ -1,9 +1,15 @@
 User: admin
 Password: admin12345678
 
+# Docker Branch
 
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.
+
+
+# 26/10/2024
+- translado a docker.
+- corrección de errores.
 
 
 #  25/10/2024

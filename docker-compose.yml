@@ -1,6 +1,20 @@
-version: '3'
-
 services:
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dbname
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d dbname"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     volumes:
@@ -9,6 +23,9 @@ services:
       - FLASK_ENV=production
     networks:
       - app-network
+    depends_on:
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:latest
@@ -24,17 +41,6 @@ services:
 networks:
   app-network:
     driver: bridge
-
-  db:
-    image: postgres:13
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=dbname
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
 
 volumes:
   postgres_data:

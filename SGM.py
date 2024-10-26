@@ -416,7 +416,7 @@ def registro():
         db.session.commit()
         flash('Usuario creado.', 'success')
         return redirect(url_for('registro'))
-    return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit)
+    return render_template('REGISTRO/index.html', users=users,form=form,formedit=formedit,date=datetime.now().strftime('%d/%m/%Y %H:%M:%S'))
 
 @app.route('/upload_avatar/<int:user_id>', methods=['POST'])
 @login_required

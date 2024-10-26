@@ -6,10 +6,13 @@ Password: admin12345678
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.
 
+# 26/10/2024 2
+- corrección de errores.
 
 # 26/10/2024
 - translado a docker.
 - corrección de errores.
+- Toggle para el sidebar de notas en celulares.
 
 
 #  25/10/2024

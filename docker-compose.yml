@@ -16,7 +16,7 @@ services:
       retries: 5
 
   web:
-    build: .
+    image: fvelz/sg-web:latest
     volumes:
       - .:/app
     environment:

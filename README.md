@@ -2,6 +2,9 @@ User: admin
 Password: admin12345678
 
 # Windows Branch
+## Descarga del Instalador
+
+[Descargar la última versión del instalador](https://github.com/FranciscoOVelazquez99/ProyectoSG/releases/tag/v0.21.0-alpha)
 
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.

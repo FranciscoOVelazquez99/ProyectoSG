@@ -6,7 +6,8 @@ El usuario y contraseña por defecto son: admin / admin12345678
 Puede cambiar la contraseña desde el sistema de administración de usuarios.
 
 
-Para que el servicio funcione correctamente, asegúrese de que el puerto 5010 esté disponible.
+Para que el servicio funcione correctamente, asegúrese de que el puerto 5010 esté disponible
+y DE PERMISOS TANTO PARA RED LOCAL COMO PARA RED PUBLICA.
 
 Para que otros usuarios puedan acceder a la aplicación, asegúrese de que el firewall permita el acceso al puerto 5010.
 

@@ -3,6 +3,8 @@ Password: admin12345678
 
 # Docker Branch
 
+## Descarga el contenedor con: `docker pull fvelz/sg-web`
+
 ### Planes:
 - (Planeado) funcionalidad de agregar etiquetas a los elementos en el inventario.
 
